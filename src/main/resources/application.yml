@@ -12,13 +12,13 @@ spring:
   application:
     name: endurance
   datasource:
-    url: jdbc:postgresql://ls-ddd197eea6bb83c573f9dcd85c7091233de947c1.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
+    url: jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
     username: dbmasteruser
     password: .>M.Azs_^eHbY}78Fa*k$V(Akr<>=M5^
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
     default-schema: public
-    url: jdbc:postgresql://ls-ddd197eea6bb83c573f9dcd85c7091233de947c1.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
+    url: jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
     password: .>M.Azs_^eHbY}78Fa*k$V(Akr<>=M5^
     user: dbmasteruser
   security:
