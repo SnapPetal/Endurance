@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dbmaster
+    username: dbmasteruser
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    default-schema: public
+    url: jdbc:postgresql://localhost:5432/dbmaster
+    user: dbmasteruser
+  security:
+    oauth2:
+      client:
+        registration:
+          local:
+            client-id: e580lipkj7npukhk3o7j2tahp
+            client-secret: d0ditdrkj0cr52de8hnj8t84103movk6hmfqf1etbarerhtospf
+            redirect-uri: http://localhost:8080/login/oauth2/code/local
+            client-name: Local Development
+            authorization-grant-type: CLIENT_CREDENTIALS
+            scope: openid
+        provider:
+          local:
+            token-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_DZ8a8Cqaw/.well-known/jwks.json

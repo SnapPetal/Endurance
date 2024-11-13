@@ -11,8 +11,6 @@ server:
 spring:
   application:
     name: endurance
-  session:
-    timeout: 15d
   datasource:
     url: jdbc:postgresql://ls-ddd197eea6bb83c573f9dcd85c7091233de947c1.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
     username: dbmasteruser
@@ -23,4 +21,17 @@ spring:
     url: jdbc:postgresql://ls-ddd197eea6bb83c573f9dcd85c7091233de947c1.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
     password: .>M.Azs_^eHbY}78Fa*k$V(Akr<>=M5^
     user: dbmasteruser
-    driver-class-name: org.postgresql.Driver
+  security:
+    oauth2:
+      client:
+        registration:
+          global:
+            client-id: 7hrr4q4t8j5nha0gm9s0cu0lvj
+            client-secret: gi4jc8md2p1h2cpqu7puvt89pk9rvh320djhm1lkm41o90ks440
+            redirect-uri: https://global.thonbecker.solutions/login/oauth2/code/global
+            client-name: Global App Client
+            authorization-grant-type: CLIENT_CREDENTIALS
+            scope: openid
+        provider:
+          global:
+            token-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_DZ8a8Cqaw/.well-known/jwks.json
