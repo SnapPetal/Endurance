@@ -6,12 +6,9 @@ on:
       - main
 
 env:
-  BP_OPENTELEMETRY_ENABLED: true
-  OTEL_JAVAAGENT_ENABLED: true
   BP_JVM_VERSION: 21
   IMAGE_NAME: "endurance"
   BUILDPACK_JAVA: "gcr.io/paketo-buildpacks/amazon-corretto"
-  BUILDPACK_OPENTELEMETRY: "gcr.io/paketo-buildpacks/opentelemetry"
 
 jobs:
   deploy:
@@ -32,10 +29,8 @@ jobs:
         run: |
           mvn spring-boot:build-image \
             -Dspring-boot.build-image.imageName=${{ env.IMAGE_NAME }} \
-            -Dspring-boot.build-image.buildpacks=${{ env.BUILDPACK_JAVA }},${{ env.BUILDPACK_OPENTELEMETRY }}
+            -Dspring-boot.build-image.buildpacks=${{ env.BUILDPACK_JAVA }}
         env:
-          BP_OPENTELEMETRY_ENABLED: ${{ env.BP_OPENTELEMETRY_ENABLED }}
-          OTEL_JAVAAGENT_ENABLED: ${{ env.OTEL_JAVAAGENT_ENABLED }}
           BP_JVM_VERSION: ${{ env.BP_JVM_VERSION }}
 
       - name: Authenticate to AWS
