@@ -60,12 +60,12 @@ public record Player(
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/quiz-system.git
+git clone https://github.com/SnapPetal/Endurance.git
 ```
 
 2. Navigate to project directory:
 ```bash
-cd quiz-system
+cd endurance
 ```
 
 3. Build the project:
@@ -86,7 +86,7 @@ Application properties can be configured in `src/main/resources/application.prop
 
 ```properties
 server.port=8080
-spring.application.name=quiz-system
+spring.application.name=endurance
 ```
 
 ## Usage
@@ -182,8 +182,8 @@ stompClient.send("/app/quiz/submit", {}, JSON.stringify({
 ### Building from Source
 
 ```bash
-git clone https://github.com/yourusername/quiz-system.git
-cd quiz-system
+git clone https://github.com/SnapPetal/Endurance.git
+cd endurance
 mvn clean install
 ```
 
