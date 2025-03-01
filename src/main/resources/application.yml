@@ -1,37 +1,32 @@
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"  # Expose all management endpoints
+spring:
+  # Application Identity
+  application:
+    name: endurance
+
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  # Database Migration Configuration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    default-schema: public
+    url: ${spring.datasource.url}    # Reuse the same URL
+    user: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+# Server Configuration
 server:
   port: 8080
   servlet:
     context-path: /
   forward-headers-strategy: native
-spring:
-  application:
-    name: endurance
-  datasource:
-    url: jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
-    username: dbmasteruser
-    password: .>M.Azs_^eHbY}78Fa*k$V(Akr<>=M5^
-  liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.xml
-    default-schema: public
-    url: jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
-    password: .>M.Azs_^eHbY}78Fa*k$V(Akr<>=M5^
-    user: dbmasteruser
-  security:
-    oauth2:
-      client:
-        registration:
-          global:
-            client-id: 7hrr4q4t8j5nha0gm9s0cu0lvj
-            client-secret: gi4jc8md2p1h2cpqu7puvt89pk9rvh320djhm1lkm41o90ks440
-            redirect-uri: https://global.thonbecker.solutions/login/oauth2/code/global
-            client-name: Global App Client
-            authorization-grant-type: CLIENT_CREDENTIALS
-            scope: openid
-        provider:
-          global:
-            token-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_DZ8a8Cqaw/.well-known/jwks.json
+
+# Monitoring/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
