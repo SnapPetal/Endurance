@@ -35,7 +35,7 @@ public class QuizService {
 
     public QuizState processAnswer(AnswerSubmission submission) {
         // Process answer logic
-        return quizStates.get(1L); // Simplified for example
+        return quizStates.get(1L);
     }
 
     public QuizState getCurrentState(Long quizId) {

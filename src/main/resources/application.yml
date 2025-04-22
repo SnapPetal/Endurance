@@ -16,6 +16,12 @@ spring:
     url: ${spring.datasource.url}    # Reuse the same URL
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  ai:
+    bedrock:
+      aws:
+        region: us-east-1
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
 
 # Server Configuration
 server:
