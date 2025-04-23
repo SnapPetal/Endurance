@@ -1,9 +1,6 @@
 package com.thonbecker.endurance.service;
 
-import com.thonbecker.endurance.type.AnswerSubmission;
-import com.thonbecker.endurance.type.Player;
-import com.thonbecker.endurance.type.Quiz;
-import com.thonbecker.endurance.type.QuizState;
+import com.thonbecker.endurance.type.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
@@ -13,6 +10,11 @@ public class QuizService {
     private final Map<Long, Quiz> quizzes = new ConcurrentHashMap<>();
     private final Map<Long, QuizState> quizStates = new ConcurrentHashMap<>();
     private final Map<Long, List<Player>> quizPlayers = new ConcurrentHashMap<>();
+    private final TriviaQuestionGenerator questionGenerator;
+
+    public QuizService(TriviaQuestionGenerator questionGenerator) {
+        this.questionGenerator = questionGenerator;
+    }
 
     public Quiz createQuiz(Quiz quiz) {
         quizzes.put(quiz.id(), quiz);
@@ -20,9 +22,24 @@ public class QuizService {
         return quiz;
     }
 
+    public Quiz createQuizWithGeneratedQuestions(String title, int questionCount, String difficulty) {
+        // Generate questions using the TriviaQuestionGenerator
+        var questions = questionGenerator.generateRamseyTrivia(questionCount, difficulty);
+
+        // Create a new Quiz with the generated questions
+        var quiz = new Quiz(generateQuizId(), title, questions, 60, QuizStatus.CREATED);
+
+        // Store the quiz
+        return createQuiz(quiz);
+    }
+
+    private Long generateQuizId() {
+        return System.currentTimeMillis();
+    }
+
     public List<Player> addPlayer(Player player) {
         // Add player logic
-        return new ArrayList<>(quizPlayers.get(1L)); // Simplified for example
+        return new ArrayList<>(quizPlayers.get(1L));
     }
 
     public QuizState startQuiz(Long quizId) {

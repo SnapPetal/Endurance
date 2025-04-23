@@ -1,10 +1,7 @@
 package com.thonbecker.endurance.controller;
 
 import com.thonbecker.endurance.service.QuizService;
-import com.thonbecker.endurance.type.AnswerSubmission;
-import com.thonbecker.endurance.type.Player;
-import com.thonbecker.endurance.type.Quiz;
-import com.thonbecker.endurance.type.QuizState;
+import com.thonbecker.endurance.type.*;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -24,6 +21,13 @@ public class QuizController {
         return quizService.createQuiz(quiz);
     }
 
+    @MessageMapping("/quiz/create/trivia")
+    @SendTo("/topic/quiz/created")
+    public Quiz createTriviaQuiz(TriviaQuizRequest request) {
+        return quizService.createQuizWithGeneratedQuestions(
+                request.title(), request.questionCount(), request.difficulty());
+    }
+
     @MessageMapping("/quiz/join")
     @SendTo("/topic/quiz/players")
     public List<Player> joinQuiz(Player player) {
@@ -33,13 +37,12 @@ public class QuizController {
     @MessageMapping("/quiz/start")
     public void startQuiz(Long quizId) {
         QuizState state = quizService.startQuiz(quizId);
-        messagingTemplate.convertAndSend("/topic/quiz/state", state);
-        messagingTemplate.convertAndSend("/topic/quiz/question", state.currentQuestion());
+        messagingTemplate.convertAndSend("/topic/quiz/state/" + quizId, state);
     }
 
     @MessageMapping("/quiz/submit")
     public void submitAnswer(AnswerSubmission submission) {
         QuizState state = quizService.processAnswer(submission);
-        messagingTemplate.convertAndSend("/topic/quiz/state", state);
+        messagingTemplate.convertAndSend("/topic/quiz/state/" + submission.quizId(), state);
     }
 }
