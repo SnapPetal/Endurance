@@ -1,4 +1,15 @@
 
+# Endurance Quiz Service
+
+Endurance is a real-time quiz service that allows client applications to create, host, and participate in interactive quizzes. The service uses WebSockets for real-time communication, enabling features like live question updates, answer submissions, and score tracking.
+
+## Documentation
+
+For a comprehensive understanding of the Endurance service, please refer to the following documentation:
+
+- [Project Requirements](docs/requirements.md) - Detailed functional and technical requirements
+- [Improvement Plan](docs/plan.md) - Comprehensive plan for enhancing the service
+
 ## Models
 
 ### Quiz Record
@@ -33,30 +44,16 @@ public record Player(
 ){}
 ```
 
-## WebSocket Endpoints
-
-### Message Mappings
-- `/quiz/join` - Player joins quiz
-- `/quiz/ready` - Player indicates ready status
-- `/quiz/submit` - Submit answer
-- `/quiz/start` - Admin starts quiz
-- `/quiz/next` - Move to next question
-
-### Subscription Topics
-- `/topic/quiz/state` - Quiz state updates
-- `/topic/quiz/players` - Player list updates
-- `/topic/quiz/question` - Current question
-- `/topic/quiz/results` - Question results
-
 ## Getting Started
 
 ### Prerequisites
 
 - Java 21 or higher
 - Maven 3.6 or higher
-- Modern web browser with WebSocket support
+- PostgreSQL database
+- AWS account for Bedrock AI services (optional, for question generation)
 
-### Installation
+### Deploying the Service
 
 1. Clone the repository:
 ```bash
@@ -68,65 +65,102 @@ git clone https://github.com/SnapPetal/Endurance.git
 cd endurance
 ```
 
-3. Build the project:
+3. Configure environment variables:
+```bash
+export DB_USERNAME=your_db_username
+export DB_PASSWORD=your_db_password
+export AWS_ACCESS_KEY_ID=your_aws_access_key  # Optional, for AI features
+export AWS_SECRET_ACCESS_KEY=your_aws_secret_key  # Optional, for AI features
+```
+
+4. Build the project:
 ```bash
 mvn clean install
 ```
 
-4. Run the application:
+5. Run the service:
 ```bash
 mvn spring-boot:run
 ```
 
-The application will be available at `http://localhost:8080`
+The service will be available at `http://localhost:8080`
 
 ### Configuration
 
-Application properties can be configured in `src/main/resources/application.properties`:
+The service can be configured through environment variables or by modifying the application configuration files:
 
-```properties
-server.port=8080
-spring.application.name=endurance
+#### application.yml
+```yaml
+spring:
+  application:
+    name: endurance
+  datasource:
+    url: jdbc:postgresql://your-database-host:5432/dbname
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+server:
+  port: 8080
 ```
 
-## Usage
+#### Development Configuration
+For local development, use the `application-dev.yml` profile:
 
-### Creating a Quiz
+```bash
+mvn spring-boot:run -Dspring.profiles.active=dev
+```
 
-1. Access the admin panel
-2. Create a new quiz with questions
-3. Set time limit per question
-4. Save the quiz
+## Service Integration
 
-### Joining a Quiz
+### Implementing the Client
 
-1. Open the quiz URL
-2. Enter your name
-3. Wait for the host to start
+To integrate the Endurance quiz service into your application:
 
-### Hosting a Quiz
+1. Set up WebSocket connection to the service
+2. Implement message handlers for quiz state updates
+3. Create user interface components for quiz interaction
+4. Handle quiz lifecycle events (join, ready, submit, etc.)
 
-1. Login as admin
-2. Select a quiz to host
-3. Wait for players to join
-4. Start the quiz
+### Using the API
 
-### Playing a Quiz
+The Endurance service provides both REST and WebSocket APIs:
 
-1. Join using your name
-2. Wait for questions to appear
-3. Select answers within the time limit
-4. View results after each question
+1. Use REST endpoints for quiz creation and management
+2. Use WebSocket for real-time quiz interaction
+3. Subscribe to relevant topics for state updates
+4. Send messages to appropriate destinations for actions
 
-## API Documentation
+### Quiz Lifecycle
 
-### Quiz Creation
+A typical quiz integration flow:
+
+1. Create a quiz using the REST API or WebSocket message
+2. Register players via the join endpoint
+3. Start the quiz when all players are ready
+4. Process questions and submit answers
+5. Handle results and end-of-quiz events
+
+## API Reference
+
+The Endurance service provides both REST and WebSocket APIs for complete quiz management and real-time interaction.
+
+### REST Endpoints
+
+#### Quiz Management
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/quiz` | POST | Create a new quiz |
+| `/api/quiz/{quizId}` | GET | Get quiz details |
+| `/api/quiz/{quizId}/join` | POST | Join a quiz as a player |
+
+#### Quiz Creation Example
 ```http
 POST /api/quiz
 Content-Type: application/json
 
 {
-  "title": "Geography Quiz",
+  "title": "Financial Literacy Quiz",
   "questions": [
     {
       "questionText": "What is the capital of France?",
@@ -139,7 +173,19 @@ Content-Type: application/json
 }
 ```
 
-### Player Join
+#### AI-Generated Quiz Example
+```http
+POST /api/quiz/generate
+Content-Type: application/json
+
+{
+  "title": "Dave Ramsey Financial Quiz",
+  "questionCount": 10,
+  "difficulty": "medium"
+}
+```
+
+#### Player Join Example
 ```http
 POST /api/quiz/{quizId}/join
 Content-Type: application/json
@@ -149,9 +195,52 @@ Content-Type: application/json
 }
 ```
 
-## WebSocket Messages
+### WebSocket API
 
-### Join Quiz
+Connect to the WebSocket endpoint at `/quiz-websocket` using SockJS or a native WebSocket client.
+
+#### Message Destinations
+
+| Destination | Description |
+|-------------|-------------|
+| `/app/quiz/join` | Join a quiz |
+| `/app/quiz/ready` | Set player ready status |
+| `/app/quiz/submit` | Submit an answer |
+| `/app/quiz/start` | Start a quiz (admin) |
+| `/app/quiz/next` | Move to next question (admin) |
+
+#### Subscription Topics
+
+| Topic | Description |
+|-------|-------------|
+| `/topic/quiz/state/{quizId}` | Quiz state updates |
+| `/topic/quiz/players/{quizId}` | Player list updates |
+| `/topic/quiz/question/{quizId}` | Current question |
+| `/topic/quiz/results/{quizId}` | Question results |
+
+#### WebSocket Connection Example
+```javascript
+// Using SockJS and STOMP
+const socket = new SockJS('/quiz-websocket');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect({}, function(frame) {
+    console.log('Connected: ' + frame);
+
+    // Subscribe to topics
+    stompClient.subscribe('/topic/quiz/state/' + quizId, function(response) {
+        const quizState = JSON.parse(response.body);
+        // Handle quiz state update
+    });
+
+    stompClient.subscribe('/topic/quiz/players/' + quizId, function(response) {
+        const players = JSON.parse(response.body);
+        // Handle player list update
+    });
+});
+```
+
+#### Join Quiz Example
 ```javascript
 stompClient.send("/app/quiz/join", {}, JSON.stringify({
     id: "playerId",
@@ -161,15 +250,18 @@ stompClient.send("/app/quiz/join", {}, JSON.stringify({
 }));
 ```
 
-### Submit Answer
+#### Submit Answer Example
 ```javascript
 stompClient.send("/app/quiz/submit", {}, JSON.stringify({
     playerId: "playerId",
+    quizId: "quizId",
     questionId: 1,
     selectedOption: 2,
-    submissionTime: timestamp
+    submissionTime: Date.now()
 }));
 ```
+
+For complete API documentation, refer to the [API Reference Documentation](docs/api-reference.md).
 
 ## Security
 
