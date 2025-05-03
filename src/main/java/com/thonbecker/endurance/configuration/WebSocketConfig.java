@@ -19,9 +19,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Keep the existing SockJS endpoint
-        registry.addEndpoint("/quiz-websocket").setAllowedOrigins("*").withSockJS();
+        registry.addEndpoint("/quiz-websocket").setAllowedOriginPatterns("*").withSockJS();
 
         // Add a raw WebSocket endpoint (same path but without SockJS wrapping)
-        registry.addEndpoint("/quiz-websocket").setAllowedOrigins("*");
+        registry.addEndpoint("/quiz-websocket").setAllowedOriginPatterns("*");
     }
 }
