@@ -504,3 +504,227 @@ To prevent abuse, the API implements rate limiting. Clients should implement exp
 3. Synchronize client-side timers with the server's `questionStartTime`
 4. Validate user input before sending to the server
 5. Implement reconnection logic for WebSocket connections
+
+## Web Client Implementation Guide
+
+This section provides a step-by-step guide for implementing a web client that connects to the Endurance quiz service.
+
+### Setting Up Your Web Project
+
+1. Create a basic HTML structure:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endurance Quiz Client</title>
+    <!-- Include SockJS and STOMP libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>Endurance Quiz</h1>
+        <div id="quiz-container">
+            <!-- Quiz UI will be dynamically generated here -->
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
+```
+
+2. Create an `app.js` file with the WebSocket connection logic:
+```javascript
+// Global variables
+let stompClient = null;
+let currentQuizId = null;
+let playerId = generateUniqueId();
+let playerName = "Player1";
+
+// Connect to WebSocket
+function connect() {
+    const socket = new SockJS('http://localhost:8080/quiz-websocket');
+    stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, onConnected, onError);
+}
+
+// On successful connection
+function onConnected() {
+    console.log('Connected to Endurance WebSocket');
+
+    // If we have a quiz ID, subscribe to its topics
+    if (currentQuizId) {
+        subscribeToQuizTopics(currentQuizId);
+    }
+
+    // Show the UI for creating or joining a quiz
+    showInitialUI();
+}
+
+// On connection error
+function onError(error) {
+    console.error('WebSocket connection error:', error);
+
+    // Implement reconnection with exponential backoff
+    setTimeout(() => {
+        console.log('Attempting to reconnect...');
+        connect();
+    }, 5000);
+}
+
+// Subscribe to topics for a specific quiz
+function subscribeToQuizTopics(quizId) {
+    currentQuizId = quizId;
+
+    // Subscribe to quiz state updates
+    stompClient.subscribe('/topic/quiz/state/' + quizId, function(response) {
+        const quizState = JSON.parse(response.body);
+        handleQuizStateUpdate(quizState);
+    });
+
+    // Subscribe to player list updates
+    stompClient.subscribe('/topic/quiz/players/' + quizId, function(response) {
+        const players = JSON.parse(response.body);
+        updatePlayerList(players);
+    });
+}
+
+// Generate a unique ID for the player
+function generateUniqueId() {
+    return 'player-' + Math.random().toString(36).substr(2, 9);
+}
+
+// Initialize the application
+function init() {
+    connect();
+}
+
+// Call init when the page loads
+window.onload = init;
+```
+
+### Creating a Quiz
+
+Add the following functions to your JavaScript file:
+
+```javascript
+// Create a new quiz
+function createQuiz() {
+    const quizTitle = document.getElementById('quiz-title').value;
+    const timePerQuestion = parseInt(document.getElementById('time-per-question').value);
+
+    const quiz = {
+        title: quizTitle,
+        questions: [
+            {
+                questionText: "What is the capital of France?",
+                options: ["London", "Paris", "Berlin", "Madrid"],
+                correctOptionIndex: 1,
+                points: 10
+            },
+            {
+                questionText: "What is 2 + 2?",
+                options: ["3", "4", "5", "6"],
+                correctOptionIndex: 1,
+                points: 5
+            }
+        ],
+        timePerQuestionInSeconds: timePerQuestion,
+        status: "CREATED"
+    };
+
+    // Send the quiz creation message
+    stompClient.send("/app/quiz/create", {}, JSON.stringify(quiz));
+
+    // Subscribe to the created quiz topic
+    stompClient.subscribe('/topic/quiz/created', function(response) {
+        const createdQuiz = JSON.parse(response.body);
+        currentQuizId = createdQuiz.id;
+
+        // Subscribe to the quiz topics
+        subscribeToQuizTopics(currentQuizId);
+
+        // Show the quiz host UI
+        showQuizHostUI(createdQuiz);
+    });
+}
+```
+
+### Joining a Quiz
+
+```javascript
+// Join an existing quiz
+function joinQuiz(quizId) {
+    currentQuizId = quizId;
+
+    // Subscribe to the quiz topics
+    subscribeToQuizTopics(quizId);
+
+    // Create player object
+    const player = {
+        id: playerId,
+        name: playerName,
+        score: 0,
+        isReady: true
+    };
+
+    // Send the join message
+    stompClient.send("/app/quiz/join", {}, JSON.stringify(player));
+
+    // Show the player UI
+    showPlayerUI();
+}
+```
+
+### Submitting Answers
+
+```javascript
+// Submit an answer to a question
+function submitAnswer(questionId, selectedOptionIndex) {
+    const answer = {
+        playerId: playerId,
+        quizId: currentQuizId,
+        questionId: questionId,
+        selectedOption: selectedOptionIndex,
+        submissionTime: Date.now()
+    };
+
+    stompClient.send("/app/quiz/submit", {}, JSON.stringify(answer));
+}
+```
+
+### Handling Quiz State Updates
+
+```javascript
+// Handle quiz state updates
+function handleQuizStateUpdate(quizState) {
+    console.log('Quiz state updated:', quizState);
+
+    // Update the UI based on the quiz state
+    if (quizState.currentQuestion) {
+        showQuestion(quizState.currentQuestion);
+    }
+
+    // Update scores
+    updateScores(quizState.playerScores);
+
+    // If the quiz is finished, show results
+    if (quizState.status === "FINISHED") {
+        showResults(quizState);
+    }
+}
+```
+
+### Complete Example
+
+For a complete working example of a web client implementation, you can refer to the sample project in the repository's `examples/web-client` directory.
+
+The example includes:
+- A complete HTML/CSS/JavaScript implementation
+- Quiz creation and joining functionality
+- Real-time question display and answer submission
+- Score tracking and results display
+- Error handling and reconnection logic

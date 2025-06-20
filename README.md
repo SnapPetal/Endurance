@@ -151,6 +151,139 @@ The Endurance service provides both REST and WebSocket APIs:
 3. Subscribe to relevant topics for state updates
 4. Send messages to appropriate destinations for actions
 
+### Running from a Web Client
+
+To run the Endurance quiz service from a web client:
+
+1. **Prerequisites**:
+   - Modern web browser with WebSocket support
+   - JavaScript environment with SockJS and STOMP libraries
+
+2. **Setup**:
+   - Include the required libraries in your HTML:
+   ```html
+   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+   ```
+
+3. **Connect to the WebSocket**:
+   ```javascript
+   // Connect to the WebSocket endpoint
+   const socket = new SockJS('http://localhost:8080/quiz-websocket');
+   const stompClient = Stomp.over(socket);
+
+   stompClient.connect({}, function(frame) {
+     console.log('Connected: ' + frame);
+
+     // Subscribe to topics for a specific quiz
+     const quizId = 1; // Replace with your quiz ID
+
+     // Subscribe to quiz state updates
+     stompClient.subscribe('/topic/quiz/state/' + quizId, function(response) {
+       const quizState = JSON.parse(response.body);
+       console.log('Quiz state updated:', quizState);
+       // Update your UI based on the quiz state
+     });
+
+     // Subscribe to player list updates
+     stompClient.subscribe('/topic/quiz/players/' + quizId, function(response) {
+       const players = JSON.parse(response.body);
+       console.log('Player list updated:', players);
+       // Update your player list UI
+     });
+   }, function(error) {
+     console.error('Connection error:', error);
+   });
+   ```
+
+4. **Join a Quiz**:
+   ```javascript
+   // Join a quiz as a player
+   const player = {
+     id: generateUniqueId(), // Implement a function to generate a unique ID
+     name: 'Player Name',
+     score: 0,
+     isReady: true
+   };
+
+   stompClient.send('/app/quiz/join', {}, JSON.stringify(player));
+   ```
+
+5. **Submit an Answer**:
+   ```javascript
+   // Submit an answer to a question
+   const answer = {
+     playerId: player.id,
+     quizId: quizId,
+     questionId: currentQuestion.id,
+     selectedOption: selectedOptionIndex,
+     submissionTime: Date.now()
+   };
+
+   stompClient.send('/app/quiz/submit', {}, JSON.stringify(answer));
+   ```
+
+6. **Create a Quiz** (using REST API):
+   ```javascript
+   // Create a new quiz
+   fetch('http://localhost:8080/api/quiz', {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify({
+       title: 'My Quiz',
+       questions: [
+         {
+           questionText: 'What is the capital of France?',
+           options: ['London', 'Paris', 'Berlin', 'Madrid'],
+           correctOptionIndex: 1,
+           points: 10
+         }
+       ],
+       timePerQuestionInSeconds: 30
+     })
+   })
+   .then(response => response.json())
+   .then(quiz => {
+     console.log('Created quiz:', quiz);
+     // Use the created quiz ID for WebSocket subscriptions
+   })
+   .catch(error => console.error('Error creating quiz:', error));
+   ```
+
+7. **Error Handling**:
+   ```javascript
+   // Implement reconnection logic
+   function connectWebSocket() {
+     const socket = new SockJS('http://localhost:8080/quiz-websocket');
+     const stompClient = Stomp.over(socket);
+
+     stompClient.connect({}, onConnected, onError);
+
+     return stompClient;
+   }
+
+   function onError(error) {
+     console.error('WebSocket connection error:', error);
+     console.log('Attempting to reconnect in 5 seconds...');
+     setTimeout(connectWebSocket, 5000);
+   }
+   ```
+
+8. **Disconnecting**:
+   ```javascript
+   // Disconnect when done
+   function disconnect() {
+     if (stompClient !== null) {
+       stompClient.disconnect();
+       console.log('Disconnected from WebSocket');
+     }
+   }
+   ```
+
+For a complete example of a web client implementation, refer to the [API Reference Documentation](docs/api-reference.md).
+
 ### Quiz Lifecycle
 
 A typical quiz integration flow:
