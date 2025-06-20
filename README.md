@@ -110,6 +110,27 @@ For local development, use the `application-dev.yml` profile:
 mvn spring-boot:run -Dspring.profiles.active=dev
 ```
 
+### Database Schema
+
+The application uses a PostgreSQL database with the following schema:
+
+#### Tables
+- **quiz** - Stores quiz information (title, time per question, status)
+- **question** - Stores question information (text, correct option index, points)
+- **question_option** - Stores the options for each question
+- **player** - Stores player information (name)
+- **quiz_player** - Join table for quiz-player relationships (scores, readiness)
+- **answer_submission** - Stores player answer submissions
+
+#### Entity Relationships
+- A Quiz has many Questions
+- A Question belongs to one Quiz and has many Options
+- A Player can participate in many Quizzes (via quiz_player)
+- A Quiz can have many Players (via quiz_player)
+- Answer Submissions are linked to a Quiz, Question, and Player
+
+The database schema is managed using Liquibase migrations, which can be found in the `src/main/resources/db/changelog/changes/` directory.
+
 ## Service Integration
 
 ### Implementing the Client

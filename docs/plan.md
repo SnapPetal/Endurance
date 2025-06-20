@@ -32,25 +32,46 @@ Based on the requirements and current implementation, the following key goals ha
 
 ## Detailed Improvement Plan
 
-### 1. Database Implementation
+### 1. Database Implementation ✓
 
 #### Rationale
 The application currently has database configuration but no schema definition or persistence implementation. Proper database persistence is essential for storing quiz data, player information, and game history.
 
 #### Action Items
-1. Define database schema using Liquibase changesets
-   - Create tables for quizzes, questions, players, and game sessions
-   - Define relationships between entities
-   - Add indexes for performance optimization
+1. Define database schema using Liquibase changesets ✓
+   - Create tables for quizzes, questions, players, and game sessions ✓
+   - Define relationships between entities ✓
+   - Add indexes for performance optimization ✓
 
-2. Implement JPA entities and repositories
-   - Create entity classes corresponding to domain models
-   - Implement repository interfaces for data access
-   - Add transaction management
+2. Implement JPA entities and repositories ✓
+   - Create entity classes corresponding to domain models ✓
+   - Implement repository interfaces for data access ✓
+   - Add transaction management ✓
 
-3. Refactor service layer to use database persistence
-   - Replace in-memory maps with database operations
-   - Implement proper error handling for database operations
+3. Refactor service layer to use database persistence ✓
+   - Replace in-memory maps with database operations ✓
+   - Implement proper error handling for database operations ✓
+
+#### Implementation Details
+The database schema has been implemented using Liquibase changesets in `src/main/resources/db/changelog/changes/001-initial-schema.xml`. The schema includes the following tables:
+
+1. **quiz** - Stores quiz information including title, time per question, and status
+2. **question** - Stores question information including text, correct option index, and points
+3. **question_option** - Stores the options for each question
+4. **player** - Stores player information including name
+5. **quiz_player** - A join table that associates players with quizzes and tracks scores and readiness
+6. **answer_submission** - Stores answer submissions from players
+
+JPA entities have been created for each table, with appropriate relationships defined between them:
+- `QuizEntity` has one-to-many relationships with `QuestionEntity`, `QuizPlayerEntity`, and `AnswerSubmissionEntity`
+- `QuestionEntity` has a many-to-one relationship with `QuizEntity` and a one-to-many relationship with `QuestionOptionEntity`
+- `PlayerEntity` has a one-to-many relationship with `QuizPlayerEntity`
+- `QuizPlayerEntity` represents the many-to-many relationship between quizzes and players
+- `AnswerSubmissionEntity` has many-to-one relationships with `QuizEntity`, `PlayerEntity`, and `QuestionEntity`
+
+Repository interfaces have been implemented for each entity, extending Spring Data JPA's `JpaRepository` to provide standard CRUD operations and custom query methods.
+
+The service layer has been refactored to use these repositories instead of in-memory maps, with `@Transactional` annotations added to methods that modify data. The `QuizState` is still kept in memory since it represents the active state of a quiz session, which is more efficient to keep in memory than to persist for every state change.
 
 ### 2. API Development
 
@@ -167,7 +188,7 @@ Good documentation and developer tools improve maintainability and facilitate co
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (1-2 months)
-- Complete database implementation
+- Complete database implementation ✓
 - Finish core service implementations
 - Implement basic security features
 - Add essential unit tests
