@@ -7,6 +7,8 @@ import com.thonbecker.endurance.entity.QuizEntity;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -24,4 +26,11 @@ public interface AnswerSubmissionRepository extends JpaRepository<AnswerSubmissi
             QuizEntity quiz, PlayerEntity player, QuestionEntity question);
 
     boolean existsByQuizAndPlayerAndQuestion(QuizEntity quiz, PlayerEntity player, QuestionEntity question);
+
+    @Query(
+            "SELECT COUNT(a) FROM AnswerSubmissionEntity a WHERE a.quiz = :quiz AND a.question = :question AND a.player.id IN :playerIds")
+    long countByQuizAndQuestionAndPlayerIdIn(
+            @Param("quiz") QuizEntity quiz,
+            @Param("question") QuestionEntity question,
+            @Param("playerIds") List<String> playerIds);
 }
