@@ -1,7 +1,11 @@
 package com.thonbecker.endurance.controller;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.thonbecker.endurance.service.QuizService;
 import com.thonbecker.endurance.type.*;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,11 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class QuizControllerTest {
@@ -40,13 +39,13 @@ public class QuizControllerTest {
         Question question = new Question(1L, "Test Question", options, 0, 10);
         List<Question> questions = Collections.singletonList(question);
         quiz = new Quiz(1L, "Test Quiz", questions, 30, QuizStatus.CREATED);
-        
+
         Map<String, Integer> playerScores = new HashMap<>();
         playerScores.put("player1", 0);
         quizState = new QuizState(1L, question, 0, playerScores, System.currentTimeMillis());
-        
+
         player = new Player("player1", "Test Player", 0, true);
-        
+
         answerSubmission = new AnswerSubmission("player1", 1L, 1L, 0, System.currentTimeMillis());
     }
 
@@ -54,10 +53,10 @@ public class QuizControllerTest {
     void createQuiz_Success() {
         // Arrange
         when(quizService.createQuiz(any(Quiz.class))).thenReturn(quiz);
-        
+
         // Act
         Quiz result = quizController.createQuiz(quiz);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(1L, result.id());
@@ -68,10 +67,10 @@ public class QuizControllerTest {
     void getAllQuizzes_Success() {
         // Arrange
         when(quizService.getAllQuizzes()).thenReturn(Collections.singletonList(quiz));
-        
+
         // Act
         ResponseEntity<List<Quiz>> response = quizController.getAllQuizzes();
-        
+
         // Assert
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(1, response.getBody().size());
@@ -82,10 +81,10 @@ public class QuizControllerTest {
     void getQuizById_Success() {
         // Arrange
         when(quizService.getQuizById(1L)).thenReturn(Optional.of(quiz));
-        
+
         // Act
         ResponseEntity<Quiz> response = quizController.getQuizById(1L);
-        
+
         // Assert
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(1L, response.getBody().id());
@@ -95,10 +94,10 @@ public class QuizControllerTest {
     void getQuizById_NotFound() {
         // Arrange
         when(quizService.getQuizById(1L)).thenReturn(Optional.empty());
-        
+
         // Act
         ResponseEntity<Quiz> response = quizController.getQuizById(1L);
-        
+
         // Assert
         assertTrue(response.getStatusCode().is4xxClientError());
     }
@@ -107,10 +106,10 @@ public class QuizControllerTest {
     void getQuizState_Success() {
         // Arrange
         when(quizService.getCurrentState(1L)).thenReturn(quizState);
-        
+
         // Act
         ResponseEntity<QuizState> response = quizController.getQuizState(1L);
-        
+
         // Assert
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(1L, response.getBody().quizId());
@@ -120,10 +119,10 @@ public class QuizControllerTest {
     void getQuizState_NotFound() {
         // Arrange
         when(quizService.getCurrentState(1L)).thenReturn(null);
-        
+
         // Act
         ResponseEntity<QuizState> response = quizController.getQuizState(1L);
-        
+
         // Assert
         assertTrue(response.getStatusCode().is4xxClientError());
     }
@@ -132,10 +131,10 @@ public class QuizControllerTest {
     void startQuiz_Success() {
         // Arrange
         when(quizService.startQuiz(1L)).thenReturn(quizState);
-        
+
         // Act
         quizController.startQuiz(1L);
-        
+
         // Assert
         verify(quizService).startQuiz(1L);
         verify(messagingTemplate).convertAndSend("/topic/quiz/state/1", quizState);
@@ -145,10 +144,10 @@ public class QuizControllerTest {
     void pauseQuiz_Success() {
         // Arrange
         when(quizService.pauseQuiz(1L)).thenReturn(quizState);
-        
+
         // Act
         quizController.pauseQuiz(1L);
-        
+
         // Assert
         verify(quizService).pauseQuiz(1L);
         verify(messagingTemplate).convertAndSend("/topic/quiz/state/1", quizState);
@@ -158,10 +157,10 @@ public class QuizControllerTest {
     void endQuiz_Success() {
         // Arrange
         when(quizService.endQuiz(1L)).thenReturn(quizState);
-        
+
         // Act
         quizController.endQuiz(1L);
-        
+
         // Assert
         verify(quizService).endQuiz(1L);
         verify(messagingTemplate).convertAndSend("/topic/quiz/state/1", quizState);
@@ -171,10 +170,10 @@ public class QuizControllerTest {
     void submitAnswer_Success() {
         // Arrange
         when(quizService.processAnswer(answerSubmission)).thenReturn(quizState);
-        
+
         // Act
         quizController.submitAnswer(answerSubmission);
-        
+
         // Assert
         verify(quizService).processAnswer(answerSubmission);
         verify(messagingTemplate).convertAndSend("/topic/quiz/state/" + answerSubmission.quizId(), quizState);

@@ -174,6 +174,9 @@ The Endurance service provides both REST and WebSocket APIs for complete quiz ma
 | `/api/quiz` | POST | Create a new quiz |
 | `/api/quiz/{quizId}` | GET | Get quiz details |
 | `/api/quiz/{quizId}/join` | POST | Join a quiz as a player |
+| `/api/quizzes` | GET | Get all quizzes |
+| `/api/quizzes/{quizId}` | GET | Get quiz by ID |
+| `/api/quizzes/{quizId}/state` | GET | Get current state of a quiz |
 
 #### Quiz Creation Example
 ```http
@@ -229,6 +232,8 @@ Connect to the WebSocket endpoint at `/quiz-websocket` using SockJS or a native 
 | `/app/quiz/submit` | Submit an answer |
 | `/app/quiz/start` | Start a quiz (admin) |
 | `/app/quiz/next` | Move to next question (admin) |
+| `/app/quiz/pause` | Pause a quiz in progress (admin) |
+| `/app/quiz/end` | End a quiz (admin) |
 
 #### Subscription Topics
 

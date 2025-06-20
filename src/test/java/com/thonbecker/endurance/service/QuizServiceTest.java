@@ -1,23 +1,20 @@
 package com.thonbecker.endurance.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.thonbecker.endurance.entity.*;
 import com.thonbecker.endurance.exception.InvalidStateException;
 import com.thonbecker.endurance.exception.ResourceNotFoundException;
-import com.thonbecker.endurance.exception.ValidationException;
 import com.thonbecker.endurance.repository.*;
 import com.thonbecker.endurance.type.*;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class QuizServiceTest {
@@ -56,14 +53,14 @@ public class QuizServiceTest {
     void setUp() {
         // Set up test data
         quizEntity = new QuizEntity(1L, "Test Quiz", 30, QuizStatus.CREATED);
-        
+
         questionEntity = new QuestionEntity();
         questionEntity.setId(1L);
         questionEntity.setQuestionText("Test Question");
         questionEntity.setCorrectOptionIndex(0);
         questionEntity.setPoints(10);
         questionEntity.setQuiz(quizEntity);
-        
+
         options = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             QuestionOptionEntity option = new QuestionOptionEntity("Option " + i, i);
@@ -71,13 +68,13 @@ public class QuizServiceTest {
             options.add(option);
         }
         questionEntity.setOptions(options);
-        
+
         List<QuestionEntity> questions = new ArrayList<>();
         questions.add(questionEntity);
         quizEntity.setQuestions(questions);
-        
+
         playerEntity = new PlayerEntity("player1", "Test Player");
-        
+
         quizPlayerEntity = new QuizPlayerEntity(quizEntity, playerEntity);
         quizPlayerEntity.setScore(0);
         quizPlayerEntity.setReady(true);
@@ -89,12 +86,11 @@ public class QuizServiceTest {
         when(quizRepository.findById(1L)).thenReturn(Optional.of(quizEntity));
         when(questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity))
                 .thenReturn(Collections.singletonList(questionEntity));
-        when(quizPlayerRepository.findByQuiz(quizEntity))
-                .thenReturn(Collections.singletonList(quizPlayerEntity));
-        
+        when(quizPlayerRepository.findByQuiz(quizEntity)).thenReturn(Collections.singletonList(quizPlayerEntity));
+
         // Act
         QuizState result = quizService.startQuiz(1L);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(1L, result.quizId());
@@ -108,7 +104,7 @@ public class QuizServiceTest {
     void startQuiz_QuizNotFound() {
         // Arrange
         when(quizRepository.findById(1L)).thenReturn(Optional.empty());
-        
+
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> quizService.startQuiz(1L));
     }
@@ -118,7 +114,7 @@ public class QuizServiceTest {
         // Arrange
         quizEntity.setStatus(QuizStatus.IN_PROGRESS);
         when(quizRepository.findById(1L)).thenReturn(Optional.of(quizEntity));
-        
+
         // Act & Assert
         assertThrows(InvalidStateException.class, () -> quizService.startQuiz(1L));
     }
@@ -128,12 +124,13 @@ public class QuizServiceTest {
         // Arrange
         quizEntity.setStatus(QuizStatus.IN_PROGRESS);
         when(quizRepository.findById(1L)).thenReturn(Optional.of(quizEntity));
-        
+
         // Set up quiz state in the service
         Map<Long, QuizState> quizStates = new HashMap<>();
-        QuizState state = new QuizState(1L, questionEntity.toDomainModel(), 0, Map.of("player1", 0), System.currentTimeMillis());
+        QuizState state =
+                new QuizState(1L, questionEntity.toDomainModel(), 0, Map.of("player1", 0), System.currentTimeMillis());
         quizStates.put(1L, state);
-        
+
         // Use reflection to set the private field
         try {
             java.lang.reflect.Field field = QuizService.class.getDeclaredField("quizStates");
@@ -142,10 +139,10 @@ public class QuizServiceTest {
         } catch (Exception e) {
             fail("Failed to set up test: " + e.getMessage());
         }
-        
+
         // Act
         QuizState result = quizService.pauseQuiz(1L);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(1L, result.quizId());
@@ -158,14 +155,14 @@ public class QuizServiceTest {
         // Arrange
         quizEntity.setStatus(QuizStatus.IN_PROGRESS);
         when(quizRepository.findById(1L)).thenReturn(Optional.of(quizEntity));
-        when(quizPlayerRepository.findByQuiz(quizEntity))
-                .thenReturn(Collections.singletonList(quizPlayerEntity));
-        
+        when(quizPlayerRepository.findByQuiz(quizEntity)).thenReturn(Collections.singletonList(quizPlayerEntity));
+
         // Set up quiz state in the service
         Map<Long, QuizState> quizStates = new HashMap<>();
-        QuizState state = new QuizState(1L, questionEntity.toDomainModel(), 0, Map.of("player1", 0), System.currentTimeMillis());
+        QuizState state =
+                new QuizState(1L, questionEntity.toDomainModel(), 0, Map.of("player1", 0), System.currentTimeMillis());
         quizStates.put(1L, state);
-        
+
         // Use reflection to set the private field
         try {
             java.lang.reflect.Field field = QuizService.class.getDeclaredField("quizStates");
@@ -174,10 +171,10 @@ public class QuizServiceTest {
         } catch (Exception e) {
             fail("Failed to set up test: " + e.getMessage());
         }
-        
+
         // Act
         QuizState result = quizService.endQuiz(1L);
-        
+
         // Assert
         assertNotNull(result);
         assertEquals(1L, result.quizId());

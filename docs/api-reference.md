@@ -10,6 +10,93 @@ Endurance is a real-time quiz service that allows users to create, join, and par
 - Player sessions are managed via unique IDs
 - Input validation is performed on all submissions
 
+## REST API
+
+Endurance provides a REST API for retrieving quiz information.
+
+### Endpoints
+
+#### Get All Quizzes
+
+Retrieves a list of all quizzes.
+
+- **Endpoint**: `/api/quizzes`
+- **Method**: GET
+- **Response**: List of Quiz objects
+
+```json
+[
+  {
+    "id": 1,
+    "title": "My Custom Quiz",
+    "questions": [
+      {
+        "id": 1,
+        "questionText": "What is the capital of France?",
+        "options": ["London", "Berlin", "Paris", "Madrid"],
+        "correctOptionIndex": 2,
+        "points": 10
+      }
+    ],
+    "timePerQuestionInSeconds": 30,
+    "status": "CREATED"
+  }
+]
+```
+
+#### Get Quiz by ID
+
+Retrieves a specific quiz by its ID.
+
+- **Endpoint**: `/api/quizzes/{quizId}`
+- **Method**: GET
+- **Response**: Quiz object
+
+```json
+{
+  "id": 1,
+  "title": "My Custom Quiz",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "What is the capital of France?",
+      "options": ["London", "Berlin", "Paris", "Madrid"],
+      "correctOptionIndex": 2,
+      "points": 10
+    }
+  ],
+  "timePerQuestionInSeconds": 30,
+  "status": "CREATED"
+}
+```
+
+#### Get Quiz State
+
+Retrieves the current state of a quiz.
+
+- **Endpoint**: `/api/quizzes/{quizId}/state`
+- **Method**: GET
+- **Response**: QuizState object
+
+```json
+{
+  "quizId": 1,
+  "currentQuestion": {
+    "id": 1,
+    "questionText": "What is the capital of France?",
+    "options": ["London", "Berlin", "Paris", "Madrid"],
+    "correctOptionIndex": 2,
+    "points": 10
+  },
+  "currentQuestionIndex": 0,
+  "playerScores": {
+    "player123": 0,
+    "player456": 0
+  },
+  "questionStartTime": 1623456789000
+}
+```
+
 ## WebSocket API
 
 Endurance uses WebSocket for real-time communication. The service uses the STOMP protocol over SockJS for message handling.
@@ -227,6 +314,74 @@ Submits an answer to a quiz question.
     "player456": 0
   },
   "questionStartTime": 1623456800000
+}
+```
+
+#### Pause Quiz
+
+Pauses a quiz that is in progress.
+
+- **Endpoint**: `/app/quiz/pause`
+- **Method**: SEND
+- **Request Body**: Quiz ID (Long)
+
+```json
+1
+```
+
+- **Response Topic**: `/topic/quiz/state/{quizId}`
+- **Response Body**: QuizState object
+
+```json
+{
+  "quizId": 1,
+  "currentQuestion": {
+    "id": 1,
+    "questionText": "What is the capital of France?",
+    "options": ["London", "Berlin", "Paris", "Madrid"],
+    "correctOptionIndex": 2,
+    "points": 10
+  },
+  "currentQuestionIndex": 0,
+  "playerScores": {
+    "player123": 0,
+    "player456": 0
+  },
+  "questionStartTime": 1623456789000
+}
+```
+
+#### End Quiz
+
+Ends a quiz, regardless of its current state.
+
+- **Endpoint**: `/app/quiz/end`
+- **Method**: SEND
+- **Request Body**: Quiz ID (Long)
+
+```json
+1
+```
+
+- **Response Topic**: `/topic/quiz/state/{quizId}`
+- **Response Body**: Final QuizState object
+
+```json
+{
+  "quizId": 1,
+  "currentQuestion": {
+    "id": 1,
+    "questionText": "What is the capital of France?",
+    "options": ["London", "Berlin", "Paris", "Madrid"],
+    "correctOptionIndex": 2,
+    "points": 10
+  },
+  "currentQuestionIndex": 0,
+  "playerScores": {
+    "player123": 10,
+    "player456": 5
+  },
+  "questionStartTime": 1623456789000
 }
 ```
 

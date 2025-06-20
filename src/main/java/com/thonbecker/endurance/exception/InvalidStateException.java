@@ -11,13 +11,14 @@ public class InvalidStateException extends QuizException {
     }
 
     public InvalidStateException(QuizStatus currentStatus, QuizStatus requiredStatus) {
-        super("Invalid quiz state: current status is " + currentStatus + 
-              ", but operation requires status " + requiredStatus);
+        super("Invalid quiz state: current status is " + currentStatus + ", but operation requires status "
+                + requiredStatus);
     }
 
     public InvalidStateException(QuizStatus currentStatus, QuizStatus... allowedStatuses) {
-        super("Invalid quiz state: current status is " + currentStatus + 
-              ", but operation requires one of " + String.join(", ", 
-                  java.util.Arrays.stream(allowedStatuses).map(Enum::name).toArray(String[]::new)));
+        super("Invalid quiz state: current status is " + currentStatus + ", but operation requires one of "
+                + String.join(
+                        ", ",
+                        java.util.Arrays.stream(allowedStatuses).map(Enum::name).toArray(String[]::new)));
     }
 }

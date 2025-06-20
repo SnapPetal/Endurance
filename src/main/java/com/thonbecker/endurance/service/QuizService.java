@@ -1,6 +1,9 @@
 package com.thonbecker.endurance.service;
 
 import com.thonbecker.endurance.entity.*;
+import com.thonbecker.endurance.exception.InvalidStateException;
+import com.thonbecker.endurance.exception.ResourceNotFoundException;
+import com.thonbecker.endurance.exception.ValidationException;
 import com.thonbecker.endurance.repository.*;
 import com.thonbecker.endurance.type.*;
 import java.util.*;
@@ -68,7 +71,7 @@ public class QuizService {
         return quizRepository
                 .findById(quizEntity.getId())
                 .map(QuizEntity::toDomainModel)
-                .orElseThrow(() -> new RuntimeException("Failed to create quiz"));
+                .orElseThrow(() -> new ResourceNotFoundException("Failed to create quiz"));
     }
 
     @Transactional
@@ -123,7 +126,12 @@ public class QuizService {
     public QuizState startQuiz(Long quizId) {
         // Get the quiz
         QuizEntity quizEntity =
-                quizRepository.findById(quizId).orElseThrow(() -> new RuntimeException("Quiz not found"));
+                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+
+        // Check if the quiz is in the correct state
+        if (quizEntity.getStatus() != QuizStatus.CREATED && quizEntity.getStatus() != QuizStatus.WAITING) {
+            throw new InvalidStateException(quizEntity.getStatus(), QuizStatus.CREATED, QuizStatus.WAITING);
+        }
 
         // Update quiz status
         quizEntity.setStatus(QuizStatus.IN_PROGRESS);
@@ -132,7 +140,7 @@ public class QuizService {
         // Get the first question
         QuestionEntity firstQuestion = questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity).stream()
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("No questions found for quiz"));
+                .orElseThrow(() -> new ResourceNotFoundException("No questions found for quiz"));
 
         // Create player scores map
         Map<String, Integer> playerScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
@@ -150,17 +158,58 @@ public class QuizService {
 
     @Transactional
     public QuizState processAnswer(AnswerSubmission submission) {
+        // Validate submission
+        if (submission == null) {
+            throw new ValidationException("submission", "cannot be null");
+        }
+        if (submission.playerId() == null || submission.playerId().isEmpty()) {
+            throw new ValidationException("playerId", "cannot be null or empty");
+        }
+        if (submission.quizId() == null) {
+            throw new ValidationException("quizId", "cannot be null");
+        }
+        if (submission.questionId() == null) {
+            throw new ValidationException("questionId", "cannot be null");
+        }
+
         // Get entities
-        QuizEntity quizEntity =
-                quizRepository.findById(submission.quizId()).orElseThrow(() -> new RuntimeException("Quiz not found"));
+        QuizEntity quizEntity = quizRepository
+                .findById(submission.quizId())
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz", submission.quizId()));
 
         PlayerEntity playerEntity = playerRepository
                 .findById(submission.playerId())
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Player", submission.playerId()));
 
         QuestionEntity questionEntity = questionRepository
                 .findById(submission.questionId())
-                .orElseThrow(() -> new RuntimeException("Question not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Question", submission.questionId()));
+
+        // Check if the quiz is in progress
+        if (quizEntity.getStatus() != QuizStatus.IN_PROGRESS) {
+            throw new InvalidStateException(quizEntity.getStatus(), QuizStatus.IN_PROGRESS);
+        }
+
+        // Check if the question belongs to the quiz
+        if (!questionEntity.getQuiz().getId().equals(quizEntity.getId())) {
+            throw new ValidationException("Question does not belong to the specified quiz");
+        }
+
+        // Check if the player is part of the quiz
+        if (!quizPlayerRepository.existsByQuizAndPlayer(quizEntity, playerEntity)) {
+            throw new ValidationException("Player is not part of the quiz");
+        }
+
+        // Check if the player has already submitted an answer for this question
+        if (answerSubmissionRepository.existsByQuizAndPlayerAndQuestion(quizEntity, playerEntity, questionEntity)) {
+            throw new ValidationException("Player has already submitted an answer for this question");
+        }
+
+        // Validate selected option
+        if (submission.selectedOption() < 0
+                || submission.selectedOption() >= questionEntity.getOptions().size()) {
+            throw new ValidationException("selectedOption", "invalid option index");
+        }
 
         // Save the answer submission
         AnswerSubmissionEntity answerEntity =
@@ -178,14 +227,158 @@ public class QuizService {
             });
         }
 
-        // For now, just return the current state
-        // In a real implementation, you would check if all players have answered
-        // and move to the next question if needed
-        return getCurrentState(submission.quizId());
+        // Get the current quiz state
+        QuizState currentState = quizStates.get(submission.quizId());
+        if (currentState == null) {
+            throw new ResourceNotFoundException("Quiz state for quiz", submission.quizId());
+        }
+
+        // Check if all players have answered the current question
+        List<PlayerEntity> quizPlayers = quizPlayerRepository.findByQuiz(quizEntity).stream()
+                .map(QuizPlayerEntity::getPlayer)
+                .collect(Collectors.toList());
+
+        List<String> playerIds = quizPlayers.stream().map(PlayerEntity::getId).collect(Collectors.toList());
+
+        // Count answers for the current question
+        long answerCount =
+                answerSubmissionRepository.countByQuizAndQuestionAndPlayerIdIn(quizEntity, questionEntity, playerIds);
+
+        // If all players have answered, move to the next question
+        if (answerCount >= playerIds.size()) {
+            return moveToNextQuestion(quizEntity, currentState);
+        }
+
+        // Otherwise, return the current state
+        return currentState;
+    }
+
+    private QuizState moveToNextQuestion(QuizEntity quizEntity, QuizState currentState) {
+        int nextQuestionIndex = currentState.currentQuestionIndex() + 1;
+
+        // Get all questions for the quiz ordered by question order
+        List<QuestionEntity> questions = questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity);
+
+        // Check if there are more questions
+        if (nextQuestionIndex < questions.size()) {
+            // Get the next question
+            QuestionEntity nextQuestion = questions.get(nextQuestionIndex);
+
+            // Create player scores map
+            Map<String, Integer> playerScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
+                    .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+
+            // Create new quiz state with the next question
+            QuizState newState = new QuizState(
+                    quizEntity.getId(),
+                    nextQuestion.toDomainModel(),
+                    nextQuestionIndex,
+                    playerScores,
+                    System.currentTimeMillis());
+
+            // Update in-memory state
+            quizStates.put(quizEntity.getId(), newState);
+
+            return newState;
+        } else {
+            // No more questions, quiz is finished
+            quizEntity.setStatus(QuizStatus.FINISHED);
+            quizRepository.save(quizEntity);
+
+            // Get the final scores
+            Map<String, Integer> finalScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
+                    .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+
+            // Create final state (keeping the last question for reference)
+            QuizState finalState = new QuizState(
+                    quizEntity.getId(),
+                    currentState.currentQuestion(),
+                    currentState.currentQuestionIndex(),
+                    finalScores,
+                    currentState.questionStartTime());
+
+            // Update in-memory state
+            quizStates.put(quizEntity.getId(), finalState);
+
+            return finalState;
+        }
     }
 
     public QuizState getCurrentState(Long quizId) {
         return quizStates.get(quizId);
+    }
+
+    @Transactional
+    public QuizState pauseQuiz(Long quizId) {
+        // Validate input
+        if (quizId == null) {
+            throw new ValidationException("quizId", "cannot be null");
+        }
+
+        // Get the quiz
+        QuizEntity quizEntity =
+                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+
+        // Check if the quiz is in progress
+        if (quizEntity.getStatus() != QuizStatus.IN_PROGRESS) {
+            throw new InvalidStateException(quizEntity.getStatus(), QuizStatus.IN_PROGRESS);
+        }
+
+        // Update quiz status
+        quizEntity.setStatus(QuizStatus.WAITING);
+        quizRepository.save(quizEntity);
+
+        // Get the current state
+        QuizState currentState = quizStates.get(quizId);
+        if (currentState == null) {
+            throw new ResourceNotFoundException("Quiz state for quiz", quizId);
+        }
+
+        return currentState;
+    }
+
+    @Transactional
+    public QuizState endQuiz(Long quizId) {
+        // Validate input
+        if (quizId == null) {
+            throw new ValidationException("quizId", "cannot be null");
+        }
+
+        // Get the quiz
+        QuizEntity quizEntity =
+                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+
+        // Check if the quiz is in a state that can be ended
+        if (quizEntity.getStatus() == QuizStatus.FINISHED) {
+            throw new InvalidStateException("Quiz is already finished");
+        }
+
+        // Update quiz status
+        quizEntity.setStatus(QuizStatus.FINISHED);
+        quizRepository.save(quizEntity);
+
+        // Get the current state
+        QuizState currentState = quizStates.get(quizId);
+        if (currentState == null) {
+            throw new ResourceNotFoundException("Quiz state for quiz", quizId);
+        }
+
+        // Get the final scores
+        Map<String, Integer> finalScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
+                .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+
+        // Create final state
+        QuizState finalState = new QuizState(
+                quizEntity.getId(),
+                currentState.currentQuestion(),
+                currentState.currentQuestionIndex(),
+                finalScores,
+                currentState.questionStartTime());
+
+        // Update in-memory state
+        quizStates.put(quizId, finalState);
+
+        return finalState;
     }
 
     @Transactional(readOnly = true)

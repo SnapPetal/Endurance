@@ -4,12 +4,15 @@ import com.thonbecker.endurance.service.QuizService;
 import com.thonbecker.endurance.type.*;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
 public class QuizController {
     private final QuizService quizService;
@@ -44,5 +47,39 @@ public class QuizController {
     public void submitAnswer(AnswerSubmission submission) {
         QuizState state = quizService.processAnswer(submission);
         messagingTemplate.convertAndSend("/topic/quiz/state/" + submission.quizId(), state);
+    }
+
+    @MessageMapping("/quiz/pause")
+    public void pauseQuiz(Long quizId) {
+        QuizState state = quizService.pauseQuiz(quizId);
+        messagingTemplate.convertAndSend("/topic/quiz/state/" + quizId, state);
+    }
+
+    @MessageMapping("/quiz/end")
+    public void endQuiz(Long quizId) {
+        QuizState state = quizService.endQuiz(quizId);
+        messagingTemplate.convertAndSend("/topic/quiz/state/" + quizId, state);
+    }
+
+    @GetMapping("/api/quizzes")
+    public ResponseEntity<List<Quiz>> getAllQuizzes() {
+        return ResponseEntity.ok(quizService.getAllQuizzes());
+    }
+
+    @GetMapping("/api/quizzes/{quizId}")
+    public ResponseEntity<Quiz> getQuizById(@PathVariable Long quizId) {
+        return quizService
+                .getQuizById(quizId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/api/quizzes/{quizId}/state")
+    public ResponseEntity<QuizState> getQuizState(@PathVariable Long quizId) {
+        QuizState state = quizService.getCurrentState(quizId);
+        if (state == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(state);
     }
 }
