@@ -3,7 +3,5 @@ spring:
     url: jdbc:postgresql://localhost:5432/dbmaster
     username: dbmasteruser
   liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.xml
-    default-schema: public
     url: jdbc:postgresql://localhost:5432/dbmaster
     user: dbmasteruser
