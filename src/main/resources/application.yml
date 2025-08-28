@@ -39,3 +39,15 @@ management:
     web:
       exposure:
         include: "*"
+  health:
+    default-timeout: 180s  # 3 minutes
+    db:
+      timeout: 60s  # 1 minute for database health
+    diskspace:
+      timeout: 30s
+    redis:
+      timeout: 30s
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
