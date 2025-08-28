@@ -91,7 +91,7 @@ public class QuizService {
     }
 
     @Transactional
-    public List<Player> addPlayer(Player player) {
+    public List<Player> addPlayer(Player player, Long quizId) {
         // Check if the player exists
         PlayerEntity playerEntity = playerRepository.findById(player.id()).orElseGet(() -> {
             // Create a new player if not found
@@ -100,7 +100,7 @@ public class QuizService {
         });
 
         // Get the quiz
-        QuizEntity quizEntity = quizRepository.findById(1L).orElseThrow(() -> new RuntimeException("Quiz not found"));
+        QuizEntity quizEntity = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Check if the player is already in the quiz
         if (!quizPlayerRepository.existsByQuizAndPlayer(quizEntity, playerEntity)) {

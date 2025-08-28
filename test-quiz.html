@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Game Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Trivia Game Test Client</h1>
+    
+    <div class="section">
+        <h3>Connection Status</h3>
+        <div id="connectionStatus" class="status disconnected">Disconnected</div>
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="section">
+        <h3>Create Quiz</h3>
+        <input type="text" id="quizTitle" placeholder="Quiz Title" value="Test Trivia Quiz">
+        <select id="questionCount">
+            <option value="3">3 Questions</option>
+            <option value="5" selected>5 Questions</option>
+            <option value="10">10 Questions</option>
+        </select>
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+        <button onclick="createQuiz()">Create Trivia Quiz</button>
+    </div>
+
+    <div class="section">
+        <h3>Join Quiz</h3>
+        <input type="text" id="playerName" placeholder="Player Name" value="TestPlayer">
+        <input type="text" id="quizId" placeholder="Quiz ID" readonly>
+        <button onclick="joinQuiz()">Join Quiz</button>
+    </div>
+
+    <div class="section">
+        <h3>Game Control</h3>
+        <button onclick="startQuiz()">Start Quiz</button>
+        <button onclick="pauseQuiz()">Pause Quiz</button>
+        <button onclick="endQuiz()">End Quiz</button>
+    </div>
+
+    <div class="section">
+        <h3>Submit Answer</h3>
+        <input type="text" id="answerOption" placeholder="Option (0-3)" type="number" min="0" max="3">
+        <button onclick="submitAnswer()">Submit Answer</button>
+    </div>
+
+    <div class="section">
+        <h3>Event Log</h3>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <script>
+        let stompClient = null;
+        let currentQuizId = null;
+        let currentPlayerId = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = 'Connected';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = 'Disconnected';
+            }
+        }
+
+        function connect() {
+            const socket = new SockJS('https://endurance.thonbecker.biz/quiz-websocket');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function (frame) {
+                log('Connected to WebSocket');
+                updateConnectionStatus(true);
+                
+                // Subscribe to quiz creation events
+                stompClient.subscribe('/topic/quiz/created', function (message) {
+                    const quiz = JSON.parse(message.body);
+                    log(`Quiz created: ${quiz.title} (ID: ${quiz.id})`);
+                    currentQuizId = quiz.id;
+                    document.getElementById('quizId').value = quiz.id;
+                });
+
+                // Subscribe to player updates
+                stompClient.subscribe('/topic/quiz/players', function (message) {
+                    const players = JSON.parse(message.body);
+                    log(`Players updated: ${players.length} players`);
+                    players.forEach(player => log(`  - ${player.name} (${player.id})`));
+                });
+
+                // Subscribe to quiz state updates
+                stompClient.subscribe('/topic/quiz/state/+', function (message) {
+                    const state = JSON.parse(message.body);
+                    log(`Quiz state updated: Question ${state.currentQuestionIndex + 1} - ${state.currentQuestion.questionText}`);
+                    log(`  Options: ${state.currentQuestion.options.join(', ')}`);
+                    log(`  Player scores: ${JSON.stringify(state.playerScores)}`);
+                });
+
+            }, function (error) {
+                log('Connection error: ' + error);
+                updateConnectionStatus(false);
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+                log('Disconnected');
+                updateConnectionStatus(false);
+            }
+        }
+
+        function createQuiz() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected. Please connect first.');
+                return;
+            }
+
+            const title = document.getElementById('quizTitle').value;
+            const questionCount = parseInt(document.getElementById('questionCount').value);
+            const difficulty = document.getElementById('difficulty').value;
+
+            const request = {
+                title: title,
+                questionCount: questionCount,
+                difficulty: difficulty
+            };
+
+            log(`Creating trivia quiz: ${title} (${questionCount} questions, ${difficulty})`);
+            stompClient.send("/app/quiz/create/trivia", {}, JSON.stringify(request));
+        }
+
+        function joinQuiz() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected. Please connect first.');
+                return;
+            }
+
+            if (!currentQuizId) {
+                log('No quiz created yet. Please create a quiz first.');
+                return;
+            }
+
+            const playerName = document.getElementById('playerName').value;
+            currentPlayerId = playerName;
+
+            const player = {
+                id: playerName,
+                name: playerName,
+                ready: true
+            };
+
+            const joinRequest = {
+                player: player,
+                quizId: currentQuizId
+            };
+
+            log(`Joining quiz ${currentQuizId} as ${playerName}`);
+            stompClient.send("/app/quiz/join", {}, JSON.stringify(joinRequest));
+        }
+
+        function startQuiz() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected. Please connect first.');
+                return;
+            }
+
+            if (!currentQuizId) {
+                log('No quiz created yet. Please create a quiz first.');
+                return;
+            }
+
+            log(`Starting quiz ${currentQuizId}`);
+            stompClient.send("/app/quiz/start", {}, JSON.stringify(currentQuizId));
+        }
+
+        function pauseQuiz() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected. Please connect first.');
+                return;
+            }
+
+            if (!currentQuizId) {
+                log('No quiz created yet. Please create a quiz first.');
+                return;
+            }
+
+            log(`Pausing quiz ${currentQuizId}`);
+            stompClient.send("/app/quiz/pause", {}, JSON.stringify(currentQuizId));
+        }
+
+        function endQuiz() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected. Please connect first.');
+                return;
+            }
+
+            if (!currentQuizId) {
+                log('No quiz created yet. Please create a quiz first.');
+                return;
+            }
+
+            log(`Ending quiz ${currentQuizId}`);
+            stompClient.send("/app/quiz/end", {}, JSON.stringify(currentQuizId));
+        }
+
+        function submitAnswer() {
+            if (!stompClient || !stompClient.connected) {
+                log('Not connected. Please connect first.');
+                return;
+            }
+
+            if (!currentQuizId || !currentPlayerId) {
+                log('No quiz or player. Please create a quiz and join first.');
+                return;
+            }
+
+            const selectedOption = parseInt(document.getElementById('answerOption').value);
+            if (isNaN(selectedOption) || selectedOption < 0 || selectedOption > 3) {
+                log('Please enter a valid option (0-3)');
+                return;
+            }
+
+            // For testing, we'll use a mock question ID
+            const submission = {
+                quizId: currentQuizId,
+                playerId: currentPlayerId,
+                questionId: 1, // Mock question ID
+                selectedOption: selectedOption
+            };
+
+            log(`Submitting answer: Option ${selectedOption}`);
+            stompClient.send("/app/quiz/submit", {}, JSON.stringify(submission));
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            log('Page loaded. Click "Connect" to start.');
+        };
+    </script>
+</body>
+</html>
+

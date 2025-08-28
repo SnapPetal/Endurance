@@ -33,8 +33,8 @@ public class QuizController {
 
     @MessageMapping("/quiz/join")
     @SendTo("/topic/quiz/players")
-    public List<Player> joinQuiz(Player player) {
-        return quizService.addPlayer(player);
+    public List<Player> joinQuiz(JoinQuizRequest request) {
+        return quizService.addPlayer(request.player(), request.quizId());
     }
 
     @MessageMapping("/quiz/start")
