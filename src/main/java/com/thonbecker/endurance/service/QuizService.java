@@ -100,7 +100,8 @@ public class QuizService {
         });
 
         // Get the quiz
-        QuizEntity quizEntity = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+        QuizEntity quizEntity =
+                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Check if the player is already in the quiz
         if (!quizPlayerRepository.existsByQuizAndPlayer(quizEntity, playerEntity)) {
