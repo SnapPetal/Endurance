@@ -1,4 +1,4 @@
-package com.thonbecker.endurance.configuration;
+package com.thonbecker.endurance.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
