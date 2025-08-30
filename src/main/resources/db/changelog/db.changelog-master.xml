@@ -4,7 +4,6 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <!-- Include all changesets -->
-    <include file="classpath:db/changelog/changes/000-create-endurance-schema.xml"/>
     <include file="classpath:db/changelog/changes/001-initial-schema.xml"/>
     <include file="classpath:db/changelog/changes/002-migrate-to-endurance-schema.xml"/>
 </databaseChangeLog>
