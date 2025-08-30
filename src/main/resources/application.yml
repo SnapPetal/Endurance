@@ -29,10 +29,7 @@ spring:
           type: trace
           hbm2ddl:
             auto: validate
-          schema_export: true
-          connection:
-            provider_disables_autocommit: true
-          default_schema: endurance
+
   ai:
     bedrock:
       aws:
