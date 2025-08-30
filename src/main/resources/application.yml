@@ -9,13 +9,18 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
-  # Database Migration Configuration
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
-    default-schema: endurance
-    url: ${spring.datasource.url}    # Reuse the same URL
+    # Remove default-schema from here - it should be in the changelog files
+    # default-schema: endurance  # Remove this line
+    url: ${spring.datasource.url}
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    # Add these properties for better schema handling
+    parameters:
+      schemaName: endurance
+    # Ensure Liquibase can create schemas
+    drop-first: false
   ai:
     bedrock:
       aws:
