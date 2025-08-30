@@ -19,6 +19,7 @@ spring:
     # Add these properties for better schema handling
     parameters:
       schemaName: endurance
+      defaultSchemaName: endurance
     # Ensure Liquibase can create schemas
     drop-first: false
   ai:
