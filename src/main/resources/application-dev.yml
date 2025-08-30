@@ -2,8 +2,12 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/dbbmaster
     username: dbmaster
-
+    password: 
   liquibase:
     url: jdbc:postgresql://localhost:5432/dbmaster
     user: dbmaster
+    password:
     default-schema-name: endurance
+
+
+      
