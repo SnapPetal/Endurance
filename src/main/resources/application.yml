@@ -14,9 +14,9 @@ spring:
     url: ${spring.datasource.url}
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-    schema: endurance
-    default-schema-name: endurance
-    drop-first: false
+    liquibaseSchemaName: endurance
+    commmand:
+      defaultSchemaName: endurance
   ai:
     bedrock:
       aws:
