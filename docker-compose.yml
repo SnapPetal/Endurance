@@ -1,8 +1,8 @@
 services:
   postgres:
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=
+      - POSTGRES_DB=dbmaster
+      - POSTGRES_USER=dbmaster     
       - POSTGRES_HOST_AUTH_METHOD=trust
     image: public.ecr.aws/docker/library/postgres:16.4
     ports:

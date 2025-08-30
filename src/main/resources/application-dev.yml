@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
+    url: jdbc:postgresql://localhost:5432/dbbmaster
+    username: dbmaster
 
   liquibase:
-    url: jdbc:postgresql://localhost:5432/postgres
-    user: postgres
+    url: jdbc:postgresql://localhost:5432/dbmaster
+    user: dbmaster
     default-schema-name: endurance
