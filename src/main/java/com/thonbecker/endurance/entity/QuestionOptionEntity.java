@@ -3,7 +3,7 @@ package com.thonbecker.endurance.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "question_option")
+@Table(name = "question_option", schema = "endurance")
 public class QuestionOptionEntity {
 
     @Id

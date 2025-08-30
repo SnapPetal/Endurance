@@ -3,7 +3,7 @@ package com.thonbecker.endurance.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "quiz_player")
+@Table(name = "quiz_player", schema = "endurance")
 public class QuizPlayerEntity {
 
     @EmbeddedId

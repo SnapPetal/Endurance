@@ -1,0 +1,100 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002" author="thonbecker">
+        <!-- This migration helps migrate existing data from public schema to endurance schema -->
+        <!-- It's safe to run even if no data exists -->
+        
+        <!-- Check if tables exist in public schema and migrate them -->
+        <sql>
+            -- Create endurance schema if it doesn't exist
+            CREATE SCHEMA IF NOT EXISTS endurance;
+            
+            -- Set search path to endurance
+            SET search_path TO endurance, public;
+        </sql>
+        
+        <!-- Migrate quiz table if it exists in public -->
+        <sql>
+            INSERT INTO endurance.quiz (id, title, time_per_question_in_seconds, status, created_at)
+            SELECT id, title, time_per_question_in_seconds, status, created_at
+            FROM public.quiz
+            WHERE NOT EXISTS (SELECT 1 FROM endurance.quiz WHERE endurance.quiz.id = public.quiz.id);
+        </sql>
+        
+        <!-- Migrate question table if it exists in public -->
+        <sql>
+            INSERT INTO endurance.question (id, quiz_id, question_text, correct_option_index, points, question_order)
+            SELECT id, quiz_id, question_text, correct_option_index, points, question_order
+            FROM public.question
+            WHERE NOT EXISTS (SELECT 1 FROM endurance.question WHERE endurance.question.id = public.question.id);
+        </sql>
+        
+        <!-- Migrate question_option table if it exists in public -->
+        <sql>
+            INSERT INTO endurance.question_option (id, question_id, option_text, option_order)
+            SELECT id, question_id, option_text, option_order
+            FROM public.question_option
+            WHERE NOT EXISTS (SELECT 1 FROM endurance.question_option WHERE endurance.question_option.id = public.question_option.id);
+        </sql>
+        
+        <!-- Migrate player table if it exists in public -->
+        <sql>
+            INSERT INTO endurance.player (id, name, created_at)
+            SELECT id, name, created_at
+            FROM public.player
+            WHERE NOT EXISTS (SELECT 1 FROM endurance.player WHERE endurance.player.id = public.player.id);
+        </sql>
+        
+        <!-- Migrate quiz_player table if it exists in public -->
+        <sql>
+            INSERT INTO endurance.quiz_player (quiz_id, player_id, score, is_ready)
+            SELECT quiz_id, player_id, score, is_ready
+            FROM public.quiz_player
+            WHERE NOT EXISTS (SELECT 1 FROM endurance.quiz_player WHERE endurance.quiz_player.quiz_id = public.quiz_player.quiz_id AND endurance.quiz_player.player_id = public.quiz_player.player_id);
+        </sql>
+        
+        <!-- Migrate answer_submission table if it exists in public -->
+        <sql>
+            INSERT INTO endurance.answer_submission (id, player_id, quiz_id, question_id, selected_option, submission_time, created_at)
+            SELECT id, player_id, quiz_id, question_id, selected_option, submission_time, created_at
+            FROM public.answer_submission
+            WHERE NOT EXISTS (SELECT 1 FROM endurance.answer_submission WHERE endurance.answer_submission.id = public.answer_submission.id);
+        </sql>
+        
+        <!-- Update sequences if they exist -->
+        <sql>
+            -- Update sequences to start from the max ID + 1 if tables exist
+            DO $$
+            DECLARE
+                max_id BIGINT;
+            BEGIN
+                -- Update quiz sequence
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'endurance' AND table_name = 'quiz') THEN
+                    SELECT COALESCE(MAX(id), 0) INTO max_id FROM endurance.quiz;
+                    IF max_id > 0 THEN
+                        EXECUTE 'ALTER SEQUENCE IF EXISTS endurance.quiz_id_seq RESTART WITH ' || (max_id + 1);
+                    END IF;
+                END IF;
+                
+                -- Update question_option sequence
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'endurance' AND table_name = 'question_option') THEN
+                    SELECT COALESCE(MAX(id), 0) INTO max_id FROM endurance.question_option;
+                    IF max_id > 0 THEN
+                        EXECUTE 'ALTER SEQUENCE IF EXISTS endurance.question_option_id_seq RESTART WITH ' || (max_id + 1);
+                    END IF;
+                END IF;
+                
+                -- Update answer_submission sequence
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'endurance' AND table_name = 'answer_submission') THEN
+                    SELECT COALESCE(MAX(id), 0) INTO max_id FROM endurance.answer_submission;
+                    IF max_id > 0 THEN
+                        EXECUTE 'ALTER SEQUENCE IF EXISTS endurance.answer_submission_id_seq RESTART WITH ' || (max_id + 1);
+                    END IF;
+                END IF;
+            END $$;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

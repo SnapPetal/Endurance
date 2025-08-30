@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "question")
+@Table(name = "question", schema = "endurance")
 public class QuestionEntity {
 
     @Id

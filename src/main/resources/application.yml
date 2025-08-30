@@ -12,7 +12,7 @@ spring:
   # Database Migration Configuration
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
-    default-schema: public
+    default-schema: endurance
     url: ${spring.datasource.url}    # Reuse the same URL
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
