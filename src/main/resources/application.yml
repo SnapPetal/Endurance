@@ -33,6 +33,17 @@ server:
     context-path: /
   forward-headers-strategy: native
 
+# Logging Configuration
+logging:
+  level:
+    org.springframework.jdbc: DEBUG
+    org.liquibase: DEBUG
+    com.zaxxer.hikari: DEBUG
+    org.postgresql: DEBUG
+    com.thonbecker.endurance: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
 # Monitoring/Actuator Configuration
 management:
   endpoints:
