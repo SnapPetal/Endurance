@@ -6,14 +6,14 @@ spring:
   # Database Configuration - will be overridden by dev profile
   datasource:
     url: ${DB_URL:jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster}
-    username: ${DB_USERNAME:}
-    password: ${DB_PASSWORD:}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
     url: ${spring.datasource.url}
     user: ${DB_USERNAME}
-    password: ${DB_PASSWORD}}
+    password: ${DB_PASSWORD}
     default-schema: endurance
   data:
     jpa:
@@ -54,7 +54,6 @@ server:
 # Logging Configuration
 logging:
   level:
-    org.springframework.jdbc: DEBUG
     org.liquibase: DEBUG
     com.zaxxer.hikari: DEBUG
     org.postgresql: DEBUG
