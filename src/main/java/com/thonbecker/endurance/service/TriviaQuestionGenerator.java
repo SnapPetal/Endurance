@@ -14,6 +14,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,22 +28,43 @@ public class TriviaQuestionGenerator {
     private static final Pattern OPTION_PATTERN = Pattern.compile("^([A-D]): (.+)$");
     private static final int DEFAULT_POINTS = 1; // Default points value for questions
 
-    private final ChatClient chatClient;
+    private ChatClient chatClient;
     private final AtomicLong idCounter = new AtomicLong(1);
 
-    public TriviaQuestionGenerator(ChatModel chatModel) {
-        ChatOptions options = ChatOptions.builder()
-                .model("anthropic.claude-3-sonnet-20240229-v1:0")
-                .temperature(0.7)
-                .maxTokens(2000)
-                .topP(0.9)
-                .build();
+    @Value("${spring.ai.chat.client.enabled:true}")
+    private boolean aiEnabled;
 
-        this.chatClient = ChatClient.builder(chatModel)
-                .defaultSystem("You are a financial knowledge expert specializing in Dave Ramsey's Baby Steps "
-                        + "and personal finance. Create clear, accurate, and educational trivia questions.")
-                .defaultOptions(options)
-                .build();
+    @Value("${spring.ai.bedrock.model:anthropic.claude-3-haiku-20240307-v1:0}")
+    private String modelName;
+
+    @Value("${spring.ai.bedrock.temperature:0.7}")
+    private double temperature;
+
+    @Value("${spring.ai.bedrock.max-tokens:1500}")
+    private int maxTokens;
+
+    @Value("${spring.ai.bedrock.top-p:0.9}")
+    private double topP;
+
+    public TriviaQuestionGenerator(ChatModel chatModel) {
+        if (aiEnabled && chatModel != null) {
+            ChatOptions options = ChatOptions.builder()
+                    .model(modelName)
+                    .temperature(temperature)
+                    .maxTokens(maxTokens)
+                    .topP(topP)
+                    .build();
+
+            this.chatClient = ChatClient.builder(chatModel)
+                    .defaultSystem("You are a financial knowledge expert specializing in Dave Ramsey's Baby Steps "
+                            + "and personal finance. Create clear, accurate, and educational trivia questions.")
+                    .defaultOptions(options)
+                    .build();
+            log.info("AI service initialized successfully with model: {}", modelName);
+        } else {
+            this.chatClient = null;
+            log.warn("AI service is disabled or ChatModel not available.");
+        }
     }
 
     /**
@@ -53,6 +75,21 @@ public class TriviaQuestionGenerator {
      * @return A list of generated Question objects
      */
     public List<Question> generateRamseyTrivia(int count, String difficulty) {
+        if (!aiEnabled || chatClient == null) {
+            throw new RuntimeException("AI service is not available. Cannot generate trivia questions.");
+        }
+
+        try {
+            // Generate questions using the TriviaQuestionGenerator
+            var questions = generateRamseyTriviaWithAI(count, difficulty);
+            return questions;
+        } catch (Exception e) {
+            log.error("Failed to generate questions with AI", e);
+            throw new RuntimeException("Failed to generate trivia questions: " + e.getMessage(), e);
+        }
+    }
+
+    private List<Question> generateRamseyTriviaWithAI(int count, String difficulty) {
         String systemPromptText =
                 """
             You are a financial trivia expert specializing in Dave Ramsey's teachings and principles.
@@ -106,7 +143,7 @@ public class TriviaQuestionGenerator {
      * Parses the AI response into structured Question objects
      *
      * @param response The text response from the AI
-     * @param points Points to assign to each question
+     * @param points Points to assign to each questions
      * @return A list of parsed Question objects
      */
     private List<Question> parseResponseToQuestions(String response, int points) {

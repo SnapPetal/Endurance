@@ -3,17 +3,17 @@ spring:
   application:
     name: endurance
 
-  # Database Configuration
+  # Database Configuration - will be overridden by dev profile
   datasource:
-    url: jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
     url: ${spring.datasource.url}
     user: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD}}
     default-schema: endurance
   data:
     jpa:
@@ -32,13 +32,17 @@ spring:
 
   ai:
     bedrock:
+      model: anthropic.claude-3-haiku-20240307-v1:0
+      temperature: 0.7
+      max-tokens: 1500
+      top-p: 0.9
       aws:
         region: us-east-1
         access-key: ${AWS_ACCESS_KEY_ID}
         secret-key: ${AWS_SECRET_ACCESS_KEY}
     chat:
       client:
-        enabled: false
+        enabled: true
 
 # Server Configuration
 server:

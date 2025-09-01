@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,69 +62,7 @@ public class QuizControllerTest {
         assertEquals("Test Quiz", result.title());
     }
 
-    @Test
-    void getAllQuizzes_Success() {
-        // Arrange
-        when(quizService.getAllQuizzes()).thenReturn(Collections.singletonList(quiz));
 
-        // Act
-        ResponseEntity<List<Quiz>> response = quizController.getAllQuizzes();
-
-        // Assert
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(1, response.getBody().size());
-        assertEquals(1L, response.getBody().get(0).id());
-    }
-
-    @Test
-    void getQuizById_Success() {
-        // Arrange
-        when(quizService.getQuizById(1L)).thenReturn(Optional.of(quiz));
-
-        // Act
-        ResponseEntity<Quiz> response = quizController.getQuizById(1L);
-
-        // Assert
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(1L, response.getBody().id());
-    }
-
-    @Test
-    void getQuizById_NotFound() {
-        // Arrange
-        when(quizService.getQuizById(1L)).thenReturn(Optional.empty());
-
-        // Act
-        ResponseEntity<Quiz> response = quizController.getQuizById(1L);
-
-        // Assert
-        assertTrue(response.getStatusCode().is4xxClientError());
-    }
-
-    @Test
-    void getQuizState_Success() {
-        // Arrange
-        when(quizService.getCurrentState(1L)).thenReturn(quizState);
-
-        // Act
-        ResponseEntity<QuizState> response = quizController.getQuizState(1L);
-
-        // Assert
-        assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(1L, response.getBody().quizId());
-    }
-
-    @Test
-    void getQuizState_NotFound() {
-        // Arrange
-        when(quizService.getCurrentState(1L)).thenReturn(null);
-
-        // Act
-        ResponseEntity<QuizState> response = quizController.getQuizState(1L);
-
-        // Assert
-        assertTrue(response.getStatusCode().is4xxClientError());
-    }
 
     @Test
     void startQuiz_Success() {

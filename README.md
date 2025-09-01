@@ -1,7 +1,7 @@
 
 # Endurance Quiz Service
 
-Endurance is a real-time quiz service that allows client applications to create, host, and participate in interactive quizzes. The service uses WebSockets for real-time communication, enabling features like live question updates, answer submissions, and score tracking.
+Endurance is a real-time quiz service that allows client applications to create, host, and participate in interactive quizzes. The service uses **WebSocket-only communication** for all operations, enabling real-time features like live question updates, answer submissions, and score tracking without the need for REST APIs.
 
 ## Documentation
 
@@ -144,12 +144,12 @@ To integrate the Endurance quiz service into your application:
 
 ### Using the API
 
-The Endurance service provides both REST and WebSocket APIs:
+The Endurance service provides a WebSocket-only API for real-time quiz interaction:
 
-1. Use REST endpoints for quiz creation and management
-2. Use WebSocket for real-time quiz interaction
-3. Subscribe to relevant topics for state updates
-4. Send messages to appropriate destinations for actions
+1. Use WebSocket messages for all quiz operations (create, join, start, submit, etc.)
+2. Subscribe to relevant topics for state updates
+3. Send messages to appropriate destinations for actions
+4. All communication is real-time via WebSocket
 
 ### Running from a Web Client
 
@@ -223,33 +223,30 @@ To run the Endurance quiz service from a web client:
    stompClient.send('/app/quiz/submit', {}, JSON.stringify(answer));
    ```
 
-6. **Create a Quiz** (using REST API):
+6. **Create a Quiz** (using WebSocket):
    ```javascript
-   // Create a new quiz
-   fetch('http://localhost:8080/api/quiz', {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/json'
-     },
-     body: JSON.stringify({
-       title: 'My Quiz',
-       questions: [
-         {
-           questionText: 'What is the capital of France?',
-           options: ['London', 'Paris', 'Berlin', 'Madrid'],
-           correctOptionIndex: 1,
-           points: 10
-         }
-       ],
-       timePerQuestionInSeconds: 30
-     })
-   })
-   .then(response => response.json())
-   .then(quiz => {
+   // Create a new quiz via WebSocket
+   const quizData = {
+     title: 'My Quiz',
+     questions: [
+       {
+         questionText: 'What is the capital of France?',
+         options: ['London', 'Paris', 'Berlin', 'Madrid'],
+         correctOptionIndex: 1,
+         points: 10
+       }
+     ],
+     timePerQuestionInSeconds: 30
+   };
+
+   stompClient.send('/app/quiz/create', {}, JSON.stringify(quizData));
+   
+   // Subscribe to quiz creation confirmation
+   stompClient.subscribe('/topic/quiz/created', function(response) {
+     const quiz = JSON.parse(response.body);
      console.log('Created quiz:', quiz);
-     // Use the created quiz ID for WebSocket subscriptions
-   })
-   .catch(error => console.error('Error creating quiz:', error));
+     // Use the created quiz ID for other operations
+   });
    ```
 
 7. **Error Handling**:
@@ -288,85 +285,70 @@ For a complete example of a web client implementation, refer to the [API Referen
 
 A typical quiz integration flow:
 
-1. Create a quiz using the REST API or WebSocket message
-2. Register players via the join endpoint
-3. Start the quiz when all players are ready
-4. Process questions and submit answers
-5. Handle results and end-of-quiz events
+1. Create a quiz using WebSocket messages (`/app/quiz/create` or `/app/quiz/create/trivia`)
+2. Register players via the join endpoint (`/app/quiz/join`)
+3. Start the quiz when all players are ready (`/app/quiz/start`)
+4. Process questions and submit answers (`/app/quiz/submit`)
+5. Handle results and end-of-quiz events (`/app/quiz/end`)
 
 ## API Reference
 
-The Endurance service provides both REST and WebSocket APIs for complete quiz management and real-time interaction.
+The Endurance service provides a WebSocket-only API for complete quiz management and real-time interaction.
 
-### REST Endpoints
+### WebSocket Message Destinations
 
 #### Quiz Management
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/quiz` | POST | Create a new quiz |
-| `/api/quiz/{quizId}` | GET | Get quiz details |
-| `/api/quiz/{quizId}/join` | POST | Join a quiz as a player |
-| `/api/quizzes` | GET | Get all quizzes |
-| `/api/quizzes/{quizId}` | GET | Get quiz by ID |
-| `/api/quizzes/{quizId}/state` | GET | Get current state of a quiz |
+| Destination | Description | Payload |
+|-------------|-------------|---------|
+| `/app/quiz/create` | Create a new quiz | Quiz object |
+| `/app/quiz/create/trivia` | Create AI-generated trivia quiz | TriviaQuizRequest |
+| `/app/quiz/join` | Join a quiz as a player | JoinQuizRequest |
+| `/app/quiz/start` | Start a quiz | Quiz ID |
+| `/app/quiz/submit` | Submit an answer | AnswerSubmission |
+| `/app/quiz/pause` | Pause a quiz | Quiz ID |
+| `/app/quiz/end` | End a quiz | Quiz ID |
 
 #### Quiz Creation Example
-```http
-POST /api/quiz
-Content-Type: application/json
-
-{
-  "title": "Financial Literacy Quiz",
-  "questions": [
+```javascript
+// Create a regular quiz
+stompClient.send('/app/quiz/create', {}, JSON.stringify({
+  title: "Financial Literacy Quiz",
+  questions: [
     {
-      "questionText": "What is the capital of France?",
-      "options": ["London", "Paris", "Berlin", "Madrid"],
-      "correctOptionIndex": 1,
-      "points": 5
+      questionText: "What is the capital of France?",
+      options: ["London", "Paris", "Berlin", "Madrid"],
+      correctOptionIndex: 1,
+      points: 5
     }
   ],
-  "timePerQuestionInSeconds": 30
-}
-```
+  timePerQuestionInSeconds: 30
+}));
 
-#### AI-Generated Quiz Example
-```http
-POST /api/quiz/generate
-Content-Type: application/json
-
-{
-  "title": "Dave Ramsey Financial Quiz",
-  "questionCount": 10,
-  "difficulty": "medium"
-}
+// Create AI-generated trivia quiz
+stompClient.send('/app/quiz/create/trivia', {}, JSON.stringify({
+  title: "Dave Ramsey Financial Quiz",
+  questionCount: 10,
+  difficulty: "medium"
+}));
 ```
 
 #### Player Join Example
-```http
-POST /api/quiz/{quizId}/join
-Content-Type: application/json
-
-{
-  "name": "John Doe"
-}
+```javascript
+stompClient.send('/app/quiz/join', {}, JSON.stringify({
+  player: {
+    id: "player123",
+    name: "John Doe",
+    score: 0,
+    isReady: true
+  },
+  quizId: 1
+}));
 ```
 
 ### WebSocket API
 
 Connect to the WebSocket endpoint at `/quiz-websocket` using SockJS or a native WebSocket client.
-
-#### Message Destinations
-
-| Destination | Description |
-|-------------|-------------|
-| `/app/quiz/join` | Join a quiz |
-| `/app/quiz/ready` | Set player ready status |
-| `/app/quiz/submit` | Submit an answer |
-| `/app/quiz/start` | Start a quiz (admin) |
-| `/app/quiz/next` | Move to next question (admin) |
-| `/app/quiz/pause` | Pause a quiz in progress (admin) |
-| `/app/quiz/end` | End a quiz (admin) |
 
 #### Subscription Topics
 
