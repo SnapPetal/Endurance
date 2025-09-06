@@ -32,17 +32,30 @@ spring:
 
   ai:
     bedrock:
-      model: anthropic.claude-3-haiku-20240307-v1:0
-      temperature: 0.7
-      max-tokens: 1500
-      top-p: 0.9
+      converse:
+        chat:
+          options:
+            model: anthropic.claude-3-haiku-20240307-v1:0
+            temperature: 0.7
+            max-tokens: 1500
+            top-p: 0.9
       aws:
         region: us-east-1
         access-key: ${AWS_ACCESS_KEY_ID}
         secret-key: ${AWS_SECRET_ACCESS_KEY}
     chat:
       client:
-        enabled: true
+        enabled: false
+  task:
+    execution:
+      pool:
+        # Core number of threads for handling WebSocket messages. Default is 8.
+        core-size: 8
+        # Maximum number of threads. Can be increased under heavy load.
+        max-size: 16
+        # Queue capacity for pending tasks before threads are created up to max-size.
+        queue-capacity: 100
+      thread-name-prefix: websocket-task-
 
 # Server Configuration
 server:
@@ -54,9 +67,6 @@ server:
 # Logging Configuration
 logging:
   level:
-    org.liquibase: DEBUG
-    com.zaxxer.hikari: DEBUG
-    org.postgresql: DEBUG
     com.thonbecker.endurance: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
@@ -68,9 +78,9 @@ management:
       exposure:
         include: "*"
   health:
-    default-timeout: 180s  # 3 minutes
+    default-timeout: 180s
     db:
-      timeout: 60s  # 1 minute for database health
+      timeout: 60s
     diskspace:
       timeout: 30s
     redis:

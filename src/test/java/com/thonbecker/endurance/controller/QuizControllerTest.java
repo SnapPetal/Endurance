@@ -62,8 +62,6 @@ public class QuizControllerTest {
         assertEquals("Test Quiz", result.title());
     }
 
-
-
     @Test
     void startQuiz_Success() {
         // Arrange

@@ -4,12 +4,14 @@ import com.thonbecker.endurance.service.QuizService;
 import com.thonbecker.endurance.type.*;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
 
-@Component
+@Slf4j
+@Controller
 @RequiredArgsConstructor
 public class QuizController {
     private final QuizService quizService;
@@ -24,6 +26,7 @@ public class QuizController {
     @MessageMapping("/quiz/create/trivia")
     @SendTo("/topic/quiz/created")
     public Quiz createTriviaQuiz(TriviaQuizRequest request) {
+        log.info("Received request to create a trivia quiz: {}", request);
         return quizService.createQuizWithGeneratedQuestions(
                 request.title(), request.questionCount(), request.difficulty());
     }

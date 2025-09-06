@@ -11,60 +11,29 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class TriviaQuestionGenerator {
+    private ChatClient chatClient;
     private static final String QUESTION_MARKER = "QUESTION:";
     private static final String OPTIONS_MARKER = "OPTIONS:";
     private static final String CORRECT_MARKER = "CORRECT:";
     private static final String EXPLANATION_MARKER = "EXPLANATION:";
-
     private static final Pattern OPTION_PATTERN = Pattern.compile("^([A-D]): (.+)$");
     private static final int DEFAULT_POINTS = 1; // Default points value for questions
-
-    private ChatClient chatClient;
     private final AtomicLong idCounter = new AtomicLong(1);
 
-    @Value("${spring.ai.chat.client.enabled:true}")
-    private boolean aiEnabled;
-
-    @Value("${spring.ai.bedrock.model:anthropic.claude-3-haiku-20240307-v1:0}")
-    private String modelName;
-
-    @Value("${spring.ai.bedrock.temperature:0.7}")
-    private double temperature;
-
-    @Value("${spring.ai.bedrock.max-tokens:1500}")
-    private int maxTokens;
-
-    @Value("${spring.ai.bedrock.top-p:0.9}")
-    private double topP;
-
     public TriviaQuestionGenerator(ChatModel chatModel) {
-        if (aiEnabled && chatModel != null) {
-            ChatOptions options = ChatOptions.builder()
-                    .model(modelName)
-                    .temperature(temperature)
-                    .maxTokens(maxTokens)
-                    .topP(topP)
-                    .build();
 
-            this.chatClient = ChatClient.builder(chatModel)
-                    .defaultSystem("You are a financial knowledge expert specializing in Dave Ramsey's Baby Steps "
-                            + "and personal finance. Create clear, accurate, and educational trivia questions.")
-                    .defaultOptions(options)
-                    .build();
-            log.info("AI service initialized successfully with model: {}", modelName);
-        } else {
-            this.chatClient = null;
-            log.warn("AI service is disabled or ChatModel not available.");
-        }
+        this.chatClient = ChatClient.builder(chatModel)
+                .defaultSystem("You are a financial knowledge expert specializing in Dave Ramsey's Baby Steps "
+                        + "and personal finance. Create clear, accurate, and educational trivia questions.")
+                .build();
+        log.info("AI service initialized successfully.");
     }
 
     /**
@@ -75,17 +44,13 @@ public class TriviaQuestionGenerator {
      * @return A list of generated Question objects
      */
     public List<Question> generateRamseyTrivia(int count, String difficulty) {
-        if (!aiEnabled || chatClient == null) {
-            throw new RuntimeException("AI service is not available. Cannot generate trivia questions.");
-        }
-
         try {
             // Generate questions using the TriviaQuestionGenerator
             var questions = generateRamseyTriviaWithAI(count, difficulty);
             return questions;
-        } catch (Exception e) {
-            log.error("Failed to generate questions with AI", e);
-            throw new RuntimeException("Failed to generate trivia questions: " + e.getMessage(), e);
+        } catch (Throwable t) {
+            log.error("Failed to generate questions with AI", t);
+            throw new RuntimeException("Failed to generate trivia questions: " + t.getMessage(), t);
         }
     }
 
@@ -180,13 +145,6 @@ public class TriviaQuestionGenerator {
         // Extract correct answer
         String correctAnswer = extractSection(block, CORRECT_MARKER, EXPLANATION_MARKER);
         int correctIndex = correctAnswer.trim().charAt(0) - 'A';
-
-        // Extract explanation
-        String explanation = "";
-        if (block.contains(EXPLANATION_MARKER)) {
-            explanation = block.substring(block.indexOf(EXPLANATION_MARKER) + EXPLANATION_MARKER.length())
-                    .trim();
-        }
 
         return new Question(generateQuestionId(), questionText, options, correctIndex, points);
     }
