@@ -79,13 +79,3 @@ management:
         include: "*"
   health:
     default-timeout: 180s
-    db:
-      timeout: 60s
-    diskspace:
-      timeout: 30s
-    redis:
-      timeout: 30s
-  endpoint:
-    health:
-      show-details: when-authorized
-      show-components: always
