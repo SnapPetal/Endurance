@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Endurance WebSocket Tester</title>
+    <style>
+        body { font-family: sans-serif; }
+        .container { display: flex; gap: 20px; }
+        .panel { border: 1px solid #ccc; padding: 10px; border-radius: 5px; }
+        .panel h2 { margin-top: 0; }
+        .log { border: 1px solid #eee; padding: 10px; height: 200px; overflow-y: scroll; }
+        input, button { margin: 5px 0; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+    <h1>Endurance WebSocket Tester</h1>
+    <div class="container">
+        <div class="panel">
+            <h2>Connection</h2>
+            <button id="connect" onclick="connect()">Connect</button>
+            <button id="disconnect" onclick="disconnect()" disabled>Disconnect</button>
+            <div id="status">Disconnected</div>
+        </div>
+        <div class="panel">
+            <h2>Logs</h2>
+            <div id="logs" class="log"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Create Quiz</h2>
+            <input type="text" id="create-title" placeholder="Quiz Title">
+            <button onclick="createQuiz()">Create</button>
+        </div>
+        <div class="panel">
+            <h2>Create Trivia Quiz</h2>
+            <input type="text" id="trivia-title" placeholder="Quiz Title">
+            <input type="number" id="trivia-count" placeholder="Question Count" value="5">
+            <input type="text" id="trivia-difficulty" placeholder="Difficulty (EASY, MEDIUM, HARD)" value="EASY">
+            <button onclick="createTriviaQuiz()">Create Trivia</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Quiz Actions</h2>
+            <input type="number" id="quiz-id" placeholder="Quiz ID">
+            <br>
+            <input type="text" id="player-name" placeholder="Player Name">
+            <button onclick="joinQuiz()">Join</button>
+            <br>
+            <button onclick="startQuiz()">Start</button>
+            <button onclick="pauseQuiz()">Pause</button>
+            <button onclick="endQuiz()">End</button>
+        </div>
+        <div class="panel">
+            <h2>Submit Answer</h2>
+            <input type="number" id="submit-quiz-id" placeholder="Quiz ID">
+            <input type="number" id="submit-player-id" placeholder="Player ID">
+            <input type="number" id="submit-question-id" placeholder="Question ID">
+            <input type="number" id="submit-option-id" placeholder="Option ID">
+            <button onclick="submitAnswer()">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        const logs = document.getElementById('logs');
+        const status = document.getElementById('status');
+
+        function log(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            logs.appendChild(p);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function connect() {
+            const socket = new SockJS('http://localhost:8080/quiz-websocket');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                status.textContent = 'Connected: ' + frame;
+                document.getElementById('connect').disabled = true;
+                document.getElementById('disconnect').disabled = false;
+                log('Connected');
+
+                stompClient.subscribe('/topic/quiz/created', function (quiz) {
+                    log('Quiz Created: ' + quiz.body);
+                    document.getElementById('quiz-id').value = JSON.parse(quiz.body).id;
+                });
+                stompClient.subscribe('/topic/quiz/players', function (players) {
+                    log('Players: ' + players.body);
+                });
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            status.textContent = 'Disconnected';
+            document.getElementById('connect').disabled = false;
+            document.getElementById('disconnect').disabled = true;
+            log('Disconnected');
+        }
+
+        function createQuiz() {
+            const title = document.getElementById('create-title').value;
+            stompClient.send("/app/quiz/create", {}, JSON.stringify({'title': title, 'questions': []}));
+        }
+
+        function createTriviaQuiz() {
+            const title = document.getElementById('trivia-title').value;
+            const questionCount = document.getElementById('trivia-count').value;
+            const difficulty = document.getElementById('trivia-difficulty').value;
+            stompClient.send("/app/quiz/create/trivia", {}, JSON.stringify({
+                'title': title, 
+                'questionCount': parseInt(questionCount), 
+                'difficulty': difficulty
+            }));
+        }
+
+        function joinQuiz() {
+            const quizId = document.getElementById('quiz-id').value;
+            const playerName = document.getElementById('player-name').value;
+            stompClient.send("/app/quiz/join", {}, JSON.stringify({'quizId': parseInt(quizId), 'player': {'name': playerName}}));
+        }
+
+        function startQuiz() {
+            const quizId = document.getElementById('quiz-id').value;
+            stompClient.subscribe('/topic/quiz/state/' + quizId, function (state) {
+                log('Quiz State: ' + state.body);
+            });
+            stompClient.send("/app/quiz/start", {}, quizId);
+        }
+        
+        function pauseQuiz() {
+            const quizId = document.getElementById('quiz-id').value;
+            stompClient.send("/app/quiz/pause", {}, quizId);
+        }
+
+        function endQuiz() {
+            const quizId = document.getElementById('quiz-id').value;
+            stompClient.send("/app/quiz/end", {}, quizId);
+        }
+
+        function submitAnswer() {
+            const quizId = document.getElementById('submit-quiz-id').value;
+            const playerId = document.getElementById('submit-player-id').value;
+            const questionId = document.getElementById('submit-question-id').value;
+            const optionId = document.getElementById('submit-option-id').value;
+            stompClient.send("/app/quiz/submit", {}, JSON.stringify({
+                'quizId': parseInt(quizId),
+                'playerId': parseInt(playerId),
+                'questionId': parseInt(questionId),
+                'optionId': parseInt(optionId)
+            }));
+        }
+
+    </script>
+</body>
+</html>

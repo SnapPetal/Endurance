@@ -49,7 +49,7 @@ public class TriviaQuestionGenerator {
             var questions = generateRamseyTriviaWithAI(count, difficulty);
             return questions;
         } catch (Throwable t) {
-            log.error("Failed to generate questions with AI", t);
+            log.error("Failed to generate questions with AI", t.getCause());
             throw new RuntimeException("Failed to generate trivia questions: " + t.getMessage(), t);
         }
     }
