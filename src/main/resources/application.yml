@@ -14,7 +14,7 @@ spring:
     url: ${spring.datasource.url}
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-        database-change-log-table: endurance_changelog
+    database-change-log-table: endurance_changelog
     database-change-log-lock-table: endurance_changelog_lock
   data:
     jpa:
