@@ -8,5 +8,4 @@ spring:
     url: jdbc:postgresql://localhost:5432/dbmaster
     user: dbmasteruser
     password:
-    default-schema: public
   

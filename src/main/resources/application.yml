@@ -14,7 +14,6 @@ spring:
     url: ${spring.datasource.url}
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-    default-schema: endurance
   data:
     jpa:
       database-platform: org.hibernate.dialect.PostgreSQLDialect
