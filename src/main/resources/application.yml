@@ -1,9 +1,7 @@
 spring:
-  # Application Identity
   application:
     name: endurance
 
-  # Database Configuration - will be overridden by dev profile
   datasource:
     url: ${DB_URL:jdbc:postgresql://ls-3cd9e093f05f5c4d801b58031197f04063b55800.cmldxjsfqvn4.us-east-1.rds.amazonaws.com:5432/dbmaster}
     username: ${DB_USERNAME}
@@ -16,20 +14,13 @@ spring:
     password: ${DB_PASSWORD}
     database-change-log-table: endurance_changelog
     database-change-log-lock-table: endurance_changelog_lock
+  
   data:
     jpa:
       database-platform: org.hibernate.dialect.PostgreSQLDialect
       hibernate:
         ddl-auto: validate
       show-sql: true
-      properties:
-        hibernate:
-          show_sql: true
-          format_sql: true
-          use_sql_comments: true
-          type: trace
-          hbm2ddl:
-            auto: validate
 
   ai:
     bedrock:
@@ -50,33 +41,21 @@ spring:
   task:
     execution:
       pool:
-        # Core number of threads for handling WebSocket messages. Default is 8.
         core-size: 8
-        # Maximum number of threads. Can be increased under heavy load.
         max-size: 16
-        # Queue capacity for pending tasks before threads are created up to max-size.
         queue-capacity: 100
       thread-name-prefix: websocket-task-
 
-# Server Configuration
 server:
   port: 8080
   servlet:
     context-path: /
   forward-headers-strategy: native
 
-# Logging Configuration
-logging:
-  level:
-    com.thonbecker.endurance: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-# Monitoring/Actuator Configuration
 management:
   endpoints:
     web:
       exposure:
         include: "*"
   health:
-    default-timeout: 180s
+    start_period: 180s
