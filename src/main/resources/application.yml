@@ -58,4 +58,4 @@ management:
       exposure:
         include: "*"
   health:
-    start_period: 180s
+    start_period: 600s
