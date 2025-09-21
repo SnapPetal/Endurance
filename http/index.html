@@ -67,16 +67,18 @@
 
     <div class="container">
         <div class="panel">
-            <h2>Join Quiz</h2>
+            <h2>Available Quizzes</h2>
+            <button onclick="loadAvailableQuizzes()">Refresh Quiz List</button>
+            <div id="available-quizzes" class="quiz-display">
+                <div>Click "Refresh Quiz List" to load available quizzes</div>
+            </div>
+        </div>
+        <div class="panel">
+            <h2>Join/Leave Quiz</h2>
             <input type="number" id="quiz-id" placeholder="Quiz ID">
             <input type="text" id="player-name" placeholder="Player Name" value="TestPlayer">
             <button onclick="joinQuiz()">Join Quiz</button>
-        </div>
-        <div class="panel">
-            <h2>Quiz Control</h2>
-            <button onclick="startQuiz()">Start Quiz</button>
-            <button onclick="pauseQuiz()">Pause Quiz</button>
-            <button onclick="endQuiz()">End Quiz</button>
+            <button onclick="leaveQuiz()">Leave Quiz</button>
         </div>
     </div>
 
@@ -86,6 +88,13 @@
             <div id="current-question" class="quiz-display">
                 <div>No active question</div>
             </div>
+        </div>
+    <div class="container">
+        <div class="panel">
+            <h2>Quiz Control</h2>
+            <button onclick="startQuiz()">Start Quiz</button>
+            <button onclick="pauseQuiz()">Pause Quiz</button>
+            <button onclick="endQuiz()">End Quiz</button>
         </div>
         <div class="panel">
             <h2>Manual Answer Submit</h2>
@@ -123,6 +132,41 @@
 
         function clearLog() {
             logs.innerHTML = '';
+        }
+
+        function loadAvailableQuizzes() {
+            if (!stompClient || !stompClient.connected) {
+                log('❌ Not connected to WebSocket');
+                return;
+            }
+            stompClient.send("/app/quiz/list", {}, "");
+            log(`📋 Requesting quiz list via WebSocket...`);
+        }
+
+        function displayAvailableQuizzes(quizzes) {
+            const quizzesDiv = document.getElementById('available-quizzes');
+            
+            if (quizzes.length === 0) {
+                quizzesDiv.innerHTML = '<div>No available quizzes to join</div>';
+                return;
+            }
+
+            let html = '<div><strong>Available Quizzes:</strong></div>';
+            quizzes.forEach(quiz => {
+                html += `
+                    <div class="player-info" style="margin: 10px 0;">
+                        <div><strong>${quiz.title}</strong> (ID: ${quiz.id})</div>
+                        <div>Status: ${quiz.status} | Questions: ${quiz.questions.length} | Time: ${quiz.timeLimit}s</div>
+                        <button onclick="selectQuiz(${quiz.id}, '${quiz.title}')" style="margin-top: 5px;">Select This Quiz</button>
+                    </div>
+                `;
+            });
+            quizzesDiv.innerHTML = html;
+        }
+
+        function selectQuiz(quizId, title) {
+            document.getElementById('quiz-id').value = quizId;
+            log(`🎯 Selected quiz: "${title}" (ID: ${quizId})`);
         }
 
         function updateCurrentQuizInfo() {
@@ -196,6 +240,13 @@
                     log(`🎯 Quiz Created: "${quiz.title}" (ID: ${quiz.id})`);
                 });
 
+                // Subscribe to quiz list updates
+                stompClient.subscribe('/topic/quiz/list', function (message) {
+                    const quizzes = JSON.parse(message.body);
+                    displayAvailableQuizzes(quizzes);
+                    log(`📋 Quiz list updated: ${quizzes.length} available quizzes`);
+                });
+
                 // Subscribe to player updates
                 stompClient.subscribe('/topic/quiz/players', function (message) {
                     const players = JSON.parse(message.body);
@@ -204,6 +255,9 @@
                         log(`   - ${player.name} (ID: ${player.id})`);
                     });
                 });
+
+                // Load initial quiz list
+                loadAvailableQuizzes();
 
             }, function(error) {
                 log('❌ Connection failed: ' + error);
@@ -274,6 +328,31 @@
             stompClient.send("/app/quiz/join", {}, JSON.stringify(request));
             updateCurrentQuizInfo();
             log(`🚪 Joining quiz ${quizId} as "${playerName}"`);
+        }
+
+        function leaveQuiz() {
+            if (!stompClient) {
+                log('❌ Not connected');
+                return;
+            }
+            if (!currentPlayer) {
+                log('❌ No current player to leave');
+                return;
+            }
+            
+            const quizId = parseInt(document.getElementById('quiz-id').value);
+            
+            const request = {
+                quizId: quizId,
+                playerId: currentPlayer.id
+            };
+            
+            stompClient.send("/app/quiz/leave", {}, JSON.stringify(request));
+            
+            // Clear current player
+            currentPlayer = null;
+            updateCurrentQuizInfo();
+            log(`🚪 Left quiz ${quizId}`);
         }
 
         function startQuiz() {

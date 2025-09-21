@@ -17,24 +17,43 @@ public class QuizController {
     private final QuizService quizService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // WebSocket endpoint to get available quizzes
+    @MessageMapping("/quiz/list")
+    @SendTo("/topic/quiz/list")
+    public List<Quiz> getAvailableQuizzes() {
+        return quizService.getAvailableQuizzes();
+    }
+
     @MessageMapping("/quiz/create")
     @SendTo("/topic/quiz/created")
     public Quiz createQuiz(Quiz quiz) {
-        return quizService.createQuiz(quiz);
+        Quiz createdQuiz = quizService.createQuiz(quiz);
+        // Broadcast updated quiz list
+        messagingTemplate.convertAndSend("/topic/quiz/list", quizService.getAvailableQuizzes());
+        return createdQuiz;
     }
 
     @MessageMapping("/quiz/create/trivia")
     @SendTo("/topic/quiz/created")
     public Quiz createTriviaQuiz(TriviaQuizRequest request) {
         log.info("Received request to create a trivia quiz: {}", request);
-        return quizService.createQuizWithGeneratedQuestions(
+        Quiz createdQuiz = quizService.createQuizWithGeneratedQuestions(
                 request.title(), request.questionCount(), request.difficulty());
+        // Broadcast updated quiz list
+        messagingTemplate.convertAndSend("/topic/quiz/list", quizService.getAvailableQuizzes());
+        return createdQuiz;
     }
 
     @MessageMapping("/quiz/join")
     @SendTo("/topic/quiz/players")
     public List<Player> joinQuiz(JoinQuizRequest request) {
         return quizService.addPlayer(request.player(), request.quizId());
+    }
+
+    @MessageMapping("/quiz/leave")
+    @SendTo("/topic/quiz/players")
+    public List<Player> leaveQuiz(LeaveQuizRequest request) {
+        return quizService.removePlayer(request.playerId(), request.quizId());
     }
 
     @MessageMapping("/quiz/start")

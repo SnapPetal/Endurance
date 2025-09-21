@@ -9,9 +9,11 @@ import com.thonbecker.endurance.type.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 public class QuizService {
     // In-memory state for active quizzes
@@ -86,6 +88,14 @@ public class QuizService {
         return createQuiz(quiz);
     }
 
+    @Transactional(readOnly = true)
+    public List<Quiz> getAvailableQuizzes() {
+        // Get all quizzes that are in CREATED or WAITING status (available to join)
+        return quizRepository.findByStatusIn(List.of(QuizStatus.CREATED, QuizStatus.WAITING)).stream()
+                .map(QuizEntity::toDomainModel)
+                .collect(Collectors.toList());
+    }
+
     private Long generateQuizId() {
         return System.currentTimeMillis();
     }
@@ -121,6 +131,36 @@ public class QuizService {
         return quizPlayerRepository.findByQuiz(quizEntity).stream()
                 .map(qp -> qp.getPlayer().toDomainModel(quizEntity.getId()))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<Player> removePlayer(String playerId, Long quizId) {
+        // Get the quiz
+        QuizEntity quizEntity =
+                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+
+        // Get the player
+        PlayerEntity playerEntity = playerRepository
+                .findById(playerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Player", playerId));
+
+        // Remove the player from the quiz
+        quizPlayerRepository.findByQuizAndPlayer(quizEntity, playerEntity).ifPresent(quizPlayerEntity -> {
+            quizPlayerRepository.delete(quizPlayerEntity);
+        });
+
+        // Get remaining players
+        List<Player> remainingPlayers = quizPlayerRepository.findByQuiz(quizEntity).stream()
+                .map(qp -> qp.getPlayer().toDomainModel(quizEntity.getId()))
+                .collect(Collectors.toList());
+
+        // Check if all players have left and quiz is in progress
+        if (remainingPlayers.isEmpty() && quizEntity.getStatus() == QuizStatus.IN_PROGRESS) {
+            log.info("All players have left quiz {}, ending quiz automatically", quizId);
+            endQuiz(quizId);
+        }
+
+        return remainingPlayers;
     }
 
     @Transactional
@@ -283,6 +323,7 @@ public class QuizService {
             return newState;
         } else {
             // No more questions, quiz is finished
+            log.info("All questions answered for quiz {}, ending quiz automatically", quizEntity.getId());
             quizEntity.setStatus(QuizStatus.FINISHED);
             quizRepository.save(quizEntity);
 

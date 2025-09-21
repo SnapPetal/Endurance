@@ -11,5 +11,7 @@ public interface QuizRepository extends JpaRepository<QuizEntity, Long> {
 
     List<QuizEntity> findByStatus(QuizStatus status);
 
+    List<QuizEntity> findByStatusIn(List<QuizStatus> statuses);
+
     List<QuizEntity> findByTitleContainingIgnoreCase(String titlePart);
 }
