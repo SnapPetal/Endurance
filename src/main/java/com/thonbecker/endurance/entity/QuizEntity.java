@@ -1,7 +1,9 @@
 package com.thonbecker.endurance.entity;
 
 import com.thonbecker.endurance.type.QuizStatus;
+
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -127,12 +129,14 @@ public class QuizEntity {
         List<com.thonbecker.endurance.type.Question> domainQuestions =
                 questions.stream().map(QuestionEntity::toDomainModel).toList();
 
-        return new com.thonbecker.endurance.type.Quiz(id, title, domainQuestions, timePerQuestionInSeconds, status);
+        return new com.thonbecker.endurance.type.Quiz(
+                id, title, domainQuestions, timePerQuestionInSeconds, status);
     }
 
     // Helper method to create entity from domain model
     public static QuizEntity fromDomainModel(com.thonbecker.endurance.type.Quiz quiz) {
-        QuizEntity entity = new QuizEntity(quiz.id(), quiz.title(), quiz.timePerQuestionInSeconds(), quiz.status());
+        QuizEntity entity = new QuizEntity(
+                quiz.id(), quiz.title(), quiz.timePerQuestionInSeconds(), quiz.status());
 
         // Questions will be added separately to maintain proper bidirectional relationship
 

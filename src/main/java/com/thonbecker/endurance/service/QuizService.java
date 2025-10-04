@@ -6,12 +6,15 @@ import com.thonbecker.endurance.exception.ResourceNotFoundException;
 import com.thonbecker.endurance.exception.ValidationException;
 import com.thonbecker.endurance.repository.*;
 import com.thonbecker.endurance.type.*;
+
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -77,7 +80,8 @@ public class QuizService {
     }
 
     @Transactional
-    public Quiz createQuizWithGeneratedQuestions(String title, int questionCount, String difficulty) {
+    public Quiz createQuizWithGeneratedQuestions(
+            String title, int questionCount, String difficulty) {
         // Generate questions using the TriviaQuestionGenerator
         var questions = questionGenerator.generateRamseyTrivia(questionCount, difficulty);
 
@@ -91,7 +95,9 @@ public class QuizService {
     @Transactional(readOnly = true)
     public List<Quiz> getAvailableQuizzes() {
         // Get all quizzes that are in CREATED or WAITING status (available to join)
-        return quizRepository.findByStatusIn(List.of(QuizStatus.CREATED, QuizStatus.WAITING)).stream()
+        return quizRepository
+                .findByStatusIn(List.of(QuizStatus.CREATED, QuizStatus.WAITING))
+                .stream()
                 .map(QuizEntity::toDomainModel)
                 .collect(Collectors.toList());
     }
@@ -110,8 +116,9 @@ public class QuizService {
         });
 
         // Get the quiz
-        QuizEntity quizEntity =
-                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+        QuizEntity quizEntity = quizRepository
+                .findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Check if the player is already in the quiz
         if (!quizPlayerRepository.existsByQuizAndPlayer(quizEntity, playerEntity)) {
@@ -136,8 +143,9 @@ public class QuizService {
     @Transactional
     public List<Player> removePlayer(String playerId, Long quizId) {
         // Get the quiz
-        QuizEntity quizEntity =
-                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+        QuizEntity quizEntity = quizRepository
+                .findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Get the player
         PlayerEntity playerEntity = playerRepository
@@ -145,9 +153,11 @@ public class QuizService {
                 .orElseThrow(() -> new ResourceNotFoundException("Player", playerId));
 
         // Remove the player from the quiz
-        quizPlayerRepository.findByQuizAndPlayer(quizEntity, playerEntity).ifPresent(quizPlayerEntity -> {
-            quizPlayerRepository.delete(quizPlayerEntity);
-        });
+        quizPlayerRepository
+                .findByQuizAndPlayer(quizEntity, playerEntity)
+                .ifPresent(quizPlayerEntity -> {
+                    quizPlayerRepository.delete(quizPlayerEntity);
+                });
 
         // Get remaining players
         List<Player> remainingPlayers = quizPlayerRepository.findByQuiz(quizEntity).stream()
@@ -166,12 +176,15 @@ public class QuizService {
     @Transactional
     public QuizState startQuiz(Long quizId) {
         // Get the quiz
-        QuizEntity quizEntity =
-                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+        QuizEntity quizEntity = quizRepository
+                .findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Check if the quiz is in the correct state
-        if (quizEntity.getStatus() != QuizStatus.CREATED && quizEntity.getStatus() != QuizStatus.WAITING) {
-            throw new InvalidStateException(quizEntity.getStatus(), QuizStatus.CREATED, QuizStatus.WAITING);
+        if (quizEntity.getStatus() != QuizStatus.CREATED
+                && quizEntity.getStatus() != QuizStatus.WAITING) {
+            throw new InvalidStateException(
+                    quizEntity.getStatus(), QuizStatus.CREATED, QuizStatus.WAITING);
         }
 
         // Update quiz status
@@ -179,17 +192,20 @@ public class QuizService {
         quizRepository.save(quizEntity);
 
         // Get the first question
-        QuestionEntity firstQuestion = questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity).stream()
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("No questions found for quiz"));
+        QuestionEntity firstQuestion =
+                questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity).stream()
+                        .findFirst()
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("No questions found for quiz"));
 
         // Create player scores map
         Map<String, Integer> playerScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
-                .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+                .collect(
+                        Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
 
         // Create quiz state
-        QuizState state =
-                new QuizState(quizId, firstQuestion.toDomainModel(), 0, playerScores, System.currentTimeMillis());
+        QuizState state = new QuizState(
+                quizId, firstQuestion.toDomainModel(), 0, playerScores, System.currentTimeMillis());
 
         // Store in memory for active state
         quizStates.put(quizId, state);
@@ -224,7 +240,8 @@ public class QuizService {
 
         QuestionEntity questionEntity = questionRepository
                 .findById(submission.questionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Question", submission.questionId()));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Question", submission.questionId()));
 
         // Check if the quiz is in progress
         if (quizEntity.getStatus() != QuizStatus.IN_PROGRESS) {
@@ -242,8 +259,10 @@ public class QuizService {
         }
 
         // Check if the player has already submitted an answer for this question
-        if (answerSubmissionRepository.existsByQuizAndPlayerAndQuestion(quizEntity, playerEntity, questionEntity)) {
-            throw new ValidationException("Player has already submitted an answer for this question");
+        if (answerSubmissionRepository.existsByQuizAndPlayerAndQuestion(
+                quizEntity, playerEntity, questionEntity)) {
+            throw new ValidationException(
+                    "Player has already submitted an answer for this question");
         }
 
         // Validate selected option
@@ -253,8 +272,8 @@ public class QuizService {
         }
 
         // Save the answer submission
-        AnswerSubmissionEntity answerEntity =
-                AnswerSubmissionEntity.fromDomainModel(submission, playerEntity, quizEntity, questionEntity);
+        AnswerSubmissionEntity answerEntity = AnswerSubmissionEntity.fromDomainModel(
+                submission, playerEntity, quizEntity, questionEntity);
         answerSubmissionRepository.save(answerEntity);
 
         // Check if the answer is correct
@@ -279,11 +298,12 @@ public class QuizService {
                 .map(QuizPlayerEntity::getPlayer)
                 .collect(Collectors.toList());
 
-        List<String> playerIds = quizPlayers.stream().map(PlayerEntity::getId).collect(Collectors.toList());
+        List<String> playerIds =
+                quizPlayers.stream().map(PlayerEntity::getId).collect(Collectors.toList());
 
         // Count answers for the current question
-        long answerCount =
-                answerSubmissionRepository.countByQuizAndQuestionAndPlayerIdIn(quizEntity, questionEntity, playerIds);
+        long answerCount = answerSubmissionRepository.countByQuizAndQuestionAndPlayerIdIn(
+                quizEntity, questionEntity, playerIds);
 
         // If all players have answered, move to the next question
         if (answerCount >= playerIds.size()) {
@@ -298,7 +318,8 @@ public class QuizService {
         int nextQuestionIndex = currentState.currentQuestionIndex() + 1;
 
         // Get all questions for the quiz ordered by question order
-        List<QuestionEntity> questions = questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity);
+        List<QuestionEntity> questions =
+                questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity);
 
         // Check if there are more questions
         if (nextQuestionIndex < questions.size()) {
@@ -307,7 +328,8 @@ public class QuizService {
 
             // Create player scores map
             Map<String, Integer> playerScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
-                    .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+                    .collect(Collectors.toMap(
+                            qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
 
             // Create new quiz state with the next question
             QuizState newState = new QuizState(
@@ -323,13 +345,16 @@ public class QuizService {
             return newState;
         } else {
             // No more questions, quiz is finished
-            log.info("All questions answered for quiz {}, ending quiz automatically", quizEntity.getId());
+            log.info(
+                    "All questions answered for quiz {}, ending quiz automatically",
+                    quizEntity.getId());
             quizEntity.setStatus(QuizStatus.FINISHED);
             quizRepository.save(quizEntity);
 
             // Get the final scores
             Map<String, Integer> finalScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
-                    .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+                    .collect(Collectors.toMap(
+                            qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
 
             // Create final state (keeping the last question for reference)
             QuizState finalState = new QuizState(
@@ -358,8 +383,9 @@ public class QuizService {
         }
 
         // Get the quiz
-        QuizEntity quizEntity =
-                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+        QuizEntity quizEntity = quizRepository
+                .findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Check if the quiz is in progress
         if (quizEntity.getStatus() != QuizStatus.IN_PROGRESS) {
@@ -387,8 +413,9 @@ public class QuizService {
         }
 
         // Get the quiz
-        QuizEntity quizEntity =
-                quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
+        QuizEntity quizEntity = quizRepository
+                .findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz", quizId));
 
         // Check if the quiz is in a state that can be ended
         if (quizEntity.getStatus() == QuizStatus.FINISHED) {
@@ -407,7 +434,8 @@ public class QuizService {
 
         // Get the final scores
         Map<String, Integer> finalScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
-                .collect(Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
+                .collect(
+                        Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
 
         // Create final state
         QuizState finalState = new QuizState(
@@ -425,7 +453,9 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public List<Quiz> getAllQuizzes() {
-        return quizRepository.findAll().stream().map(QuizEntity::toDomainModel).collect(Collectors.toList());
+        return quizRepository.findAll().stream()
+                .map(QuizEntity::toDomainModel)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

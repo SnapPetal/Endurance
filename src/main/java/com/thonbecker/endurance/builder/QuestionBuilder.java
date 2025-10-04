@@ -1,6 +1,7 @@
 package com.thonbecker.endurance.builder;
 
 import com.thonbecker.endurance.type.Question;
+
 import java.util.ArrayList;
 import java.util.List;
 

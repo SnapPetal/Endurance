@@ -5,7 +5,7 @@ import static org.mockito.Mockito.*;
 
 import com.thonbecker.endurance.service.QuizService;
 import com.thonbecker.endurance.type.*;
-import java.util.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+
+import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
 public class QuizControllerTest {
@@ -111,6 +113,7 @@ public class QuizControllerTest {
 
         // Assert
         verify(quizService).processAnswer(answerSubmission);
-        verify(messagingTemplate).convertAndSend("/topic/quiz/state/" + answerSubmission.quizId(), quizState);
+        verify(messagingTemplate)
+                .convertAndSend("/topic/quiz/state/" + answerSubmission.quizId(), quizState);
     }
 }

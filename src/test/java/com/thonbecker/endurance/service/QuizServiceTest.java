@@ -8,13 +8,15 @@ import com.thonbecker.endurance.exception.InvalidStateException;
 import com.thonbecker.endurance.exception.ResourceNotFoundException;
 import com.thonbecker.endurance.repository.*;
 import com.thonbecker.endurance.type.*;
-import java.util.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
 public class QuizServiceTest {
@@ -86,7 +88,8 @@ public class QuizServiceTest {
         when(quizRepository.findById(1L)).thenReturn(Optional.of(quizEntity));
         when(questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity))
                 .thenReturn(Collections.singletonList(questionEntity));
-        when(quizPlayerRepository.findByQuiz(quizEntity)).thenReturn(Collections.singletonList(quizPlayerEntity));
+        when(quizPlayerRepository.findByQuiz(quizEntity))
+                .thenReturn(Collections.singletonList(quizPlayerEntity));
 
         // Act
         QuizState result = quizService.startQuiz(1L);
@@ -127,8 +130,12 @@ public class QuizServiceTest {
 
         // Set up quiz state in the service
         Map<Long, QuizState> quizStates = new HashMap<>();
-        QuizState state =
-                new QuizState(1L, questionEntity.toDomainModel(), 0, Map.of("player1", 0), System.currentTimeMillis());
+        QuizState state = new QuizState(
+                1L,
+                questionEntity.toDomainModel(),
+                0,
+                Map.of("player1", 0),
+                System.currentTimeMillis());
         quizStates.put(1L, state);
 
         // Use reflection to set the private field
@@ -155,12 +162,17 @@ public class QuizServiceTest {
         // Arrange
         quizEntity.setStatus(QuizStatus.IN_PROGRESS);
         when(quizRepository.findById(1L)).thenReturn(Optional.of(quizEntity));
-        when(quizPlayerRepository.findByQuiz(quizEntity)).thenReturn(Collections.singletonList(quizPlayerEntity));
+        when(quizPlayerRepository.findByQuiz(quizEntity))
+                .thenReturn(Collections.singletonList(quizPlayerEntity));
 
         // Set up quiz state in the service
         Map<Long, QuizState> quizStates = new HashMap<>();
-        QuizState state =
-                new QuizState(1L, questionEntity.toDomainModel(), 0, Map.of("player1", 0), System.currentTimeMillis());
+        QuizState state = new QuizState(
+                1L,
+                questionEntity.toDomainModel(),
+                0,
+                Map.of("player1", 0),
+                System.currentTimeMillis());
         quizStates.put(1L, state);
 
         // Use reflection to set the private field

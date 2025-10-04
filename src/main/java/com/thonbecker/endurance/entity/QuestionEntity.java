@@ -1,6 +1,7 @@
 package com.thonbecker.endurance.entity;
 
 import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,7 +36,8 @@ public class QuestionEntity {
     public QuestionEntity() {}
 
     // Constructor with fields
-    public QuestionEntity(Long id, String questionText, int correctOptionIndex, int points, int questionOrder) {
+    public QuestionEntity(
+            Long id, String questionText, int correctOptionIndex, int points, int questionOrder) {
         this.id = id;
         this.questionText = questionText;
         this.correctOptionIndex = correctOptionIndex;
@@ -117,13 +119,19 @@ public class QuestionEntity {
                 .map(QuestionOptionEntity::getOptionText)
                 .collect(Collectors.toList());
 
-        return new com.thonbecker.endurance.type.Question(id, questionText, optionTexts, correctOptionIndex, points);
+        return new com.thonbecker.endurance.type.Question(
+                id, questionText, optionTexts, correctOptionIndex, points);
     }
 
     // Helper method to create entity from domain model
-    public static QuestionEntity fromDomainModel(com.thonbecker.endurance.type.Question question, int order) {
+    public static QuestionEntity fromDomainModel(
+            com.thonbecker.endurance.type.Question question, int order) {
         QuestionEntity entity = new QuestionEntity(
-                question.id(), question.questionText(), question.correctOptionIndex(), question.points(), order);
+                question.id(),
+                question.questionText(),
+                question.correctOptionIndex(),
+                question.points(),
+                order);
 
         // Options will be added separately to maintain proper bidirectional relationship
 

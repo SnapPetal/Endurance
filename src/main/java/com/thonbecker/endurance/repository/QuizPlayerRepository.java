@@ -4,10 +4,12 @@ import com.thonbecker.endurance.entity.PlayerEntity;
 import com.thonbecker.endurance.entity.QuizEntity;
 import com.thonbecker.endurance.entity.QuizPlayerEntity;
 import com.thonbecker.endurance.entity.QuizPlayerKey;
-import java.util.List;
-import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface QuizPlayerRepository extends JpaRepository<QuizPlayerEntity, QuizPlayerKey> {

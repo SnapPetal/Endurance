@@ -1,12 +1,9 @@
 package com.thonbecker.endurance.service;
 
 import com.thonbecker.endurance.type.Question;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -14,6 +11,12 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -30,8 +33,9 @@ public class TriviaQuestionGenerator {
     public TriviaQuestionGenerator(ChatModel chatModel) {
 
         this.chatClient = ChatClient.builder(chatModel)
-                .defaultSystem("You are a financial knowledge expert specializing in Dave Ramsey's Baby Steps "
-                        + "and personal finance. Create clear, accurate, and educational trivia questions.")
+                .defaultSystem(
+                        "You are a financial knowledge expert specializing in Dave Ramsey's Baby Steps "
+                                + "and personal finance. Create clear, accurate, and educational trivia questions.")
                 .build();
         log.info("AI service initialized successfully.");
     }
@@ -79,7 +83,8 @@ public class TriviaQuestionGenerator {
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemPromptText);
         Message systemMessage = systemPromptTemplate.createMessage();
 
-        String userPromptText = String.format("Generate %d Dave Ramsey financial trivia questions", count);
+        String userPromptText =
+                String.format("Generate %d Dave Ramsey financial trivia questions", count);
         Message userMessage = new UserMessage(userPromptText);
 
         Prompt prompt = new Prompt(List.of(systemMessage, userMessage));

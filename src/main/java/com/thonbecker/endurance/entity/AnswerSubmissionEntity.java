@@ -1,6 +1,7 @@
 package com.thonbecker.endurance.entity;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -37,7 +38,11 @@ public class AnswerSubmissionEntity {
 
     // Constructor with fields
     public AnswerSubmissionEntity(
-            PlayerEntity player, QuizEntity quiz, QuestionEntity question, int selectedOption, long submissionTime) {
+            PlayerEntity player,
+            QuizEntity quiz,
+            QuestionEntity question,
+            int selectedOption,
+            long submissionTime) {
         this.player = player;
         this.quiz = quiz;
         this.question = question;

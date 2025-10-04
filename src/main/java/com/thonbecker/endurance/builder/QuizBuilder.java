@@ -3,6 +3,7 @@ package com.thonbecker.endurance.builder;
 import com.thonbecker.endurance.type.Question;
 import com.thonbecker.endurance.type.Quiz;
 import com.thonbecker.endurance.type.QuizStatus;
+
 import java.util.ArrayList;
 import java.util.List;
 
