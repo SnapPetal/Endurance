@@ -1,4 +1,3 @@
-
 # Endurance Quiz Service
 
 Endurance is a real-time quiz service that allows client applications to create, host, and participate in interactive quizzes. The service uses **WebSocket-only communication** for all operations, enabling real-time features like live question updates, answer submissions, and score tracking without the need for REST APIs.
@@ -66,11 +65,11 @@ cd endurance
 ```
 
 3. Configure environment variables:
+
+Copy the `.env.example` file to `.env` and fill in the required values.
+
 ```bash
-export DB_USERNAME=your_db_username
-export DB_PASSWORD=your_db_password
-export AWS_ACCESS_KEY_ID=your_aws_access_key  # Optional, for AI features
-export AWS_SECRET_ACCESS_KEY=your_aws_secret_key  # Optional, for AI features
+cp .env.example .env
 ```
 
 4. Build the project:
