@@ -39,8 +39,15 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_KEY }}
           aws configure set default.region ${{ secrets.AWS_REGION }}
 
+      - name: Install Lightsail plugin
+        run: |
+          sudo curl "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" -o "/usr/local/bin/lightsailctl"
+          sudo chmod +x /usr/local/bin/lightsailctl
+
       - name: Build and push Docker image
         run: |
-          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/p0w8z2j2
-          docker tag endurance:latest public.ecr.aws/p0w8z2j2/endurance:latest
-          docker push public.ecr.aws/p0w8z2j2/endurance:latest
+          aws lightsail push-container-image \
+            --region us-east-1 \
+            --service-name endurance-service \
+            --label endurance \
+            --image endurance:latest
