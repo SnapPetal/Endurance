@@ -50,6 +50,29 @@ public class QuizService {
 
     @Transactional
     public Quiz createQuiz(Quiz quiz) {
+        // Validate quiz has questions
+        if (quiz.questions() == null || quiz.questions().isEmpty()) {
+            throw new ValidationException(
+                    "questions", "Quiz must have at least one question before it can be created");
+        }
+
+        // Validate each question has options
+        for (int i = 0; i < quiz.questions().size(); i++) {
+            Question question = quiz.questions().get(i);
+            if (question.options() == null || question.options().isEmpty()) {
+                throw new ValidationException(
+                        "questions[" + i + "].options",
+                        "Each question must have at least one option");
+            }
+            if (question.correctOptionIndex() < 0
+                    || question.correctOptionIndex() >= question.options().size()) {
+                throw new ValidationException(
+                        "questions[" + i + "].correctOptionIndex",
+                        "Correct option index must be valid (between 0 and "
+                                + (question.options().size() - 1) + ")");
+            }
+        }
+
         // Convert domain model to entity
         QuizEntity quizEntity = QuizEntity.fromDomainModel(quiz);
 
@@ -175,6 +198,11 @@ public class QuizService {
 
     @Transactional
     public QuizState startQuiz(Long quizId) {
+        // Validate input
+        if (quizId == null) {
+            throw new ValidationException("quizId", "cannot be null");
+        }
+
         // Get the quiz
         QuizEntity quizEntity = quizRepository
                 .findById(quizId)
@@ -184,22 +212,46 @@ public class QuizService {
         if (quizEntity.getStatus() != QuizStatus.CREATED
                 && quizEntity.getStatus() != QuizStatus.WAITING) {
             throw new InvalidStateException(
-                    quizEntity.getStatus(), QuizStatus.CREATED, QuizStatus.WAITING);
+                    "Cannot start quiz with status " + quizEntity.getStatus()
+                            + ". Quiz must be in CREATED or WAITING status to start.");
         }
+
+        // Get all questions for validation
+        List<QuestionEntity> questions =
+                questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity);
+
+        // Validate quiz has questions
+        if (questions.isEmpty()) {
+            throw new ValidationException(
+                    "Quiz " + quizId + " has no questions and cannot be started. "
+                            + "Please add questions to the quiz before starting.");
+        }
+
+        // Get all players in the quiz
+        List<QuizPlayerEntity> quizPlayers = quizPlayerRepository.findByQuiz(quizEntity);
+
+        // Validate quiz has at least one player
+        if (quizPlayers.isEmpty()) {
+            log.warn("Starting quiz {} with no players", quizId);
+        }
+
+        // Log quiz start
+        log.info(
+                "Starting quiz {} ('{}') with {} questions and {} players",
+                quizId,
+                quizEntity.getTitle(),
+                questions.size(),
+                quizPlayers.size());
 
         // Update quiz status
         quizEntity.setStatus(QuizStatus.IN_PROGRESS);
         quizRepository.save(quizEntity);
 
         // Get the first question
-        QuestionEntity firstQuestion =
-                questionRepository.findByQuizOrderByQuestionOrderAsc(quizEntity).stream()
-                        .findFirst()
-                        .orElseThrow(
-                                () -> new ResourceNotFoundException("No questions found for quiz"));
+        QuestionEntity firstQuestion = questions.getFirst();
 
         // Create player scores map
-        Map<String, Integer> playerScores = quizPlayerRepository.findByQuiz(quizEntity).stream()
+        Map<String, Integer> playerScores = quizPlayers.stream()
                 .collect(
                         Collectors.toMap(qp -> qp.getPlayer().getId(), QuizPlayerEntity::getScore));
 
@@ -209,6 +261,8 @@ public class QuizService {
 
         // Store in memory for active state
         quizStates.put(quizId, state);
+
+        log.info("Quiz {} started successfully with first question: {}", quizId, firstQuestion.getId());
 
         return state;
     }
