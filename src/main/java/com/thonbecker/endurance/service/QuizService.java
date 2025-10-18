@@ -131,12 +131,21 @@ public class QuizService {
 
     @Transactional
     public List<Player> addPlayer(Player player, Long quizId) {
-        // Check if the player exists
-        PlayerEntity playerEntity = playerRepository.findById(player.id()).orElseGet(() -> {
-            // Create a new player if not found
-            PlayerEntity newPlayer = PlayerEntity.fromDomainModel(player);
-            return playerRepository.save(newPlayer);
-        });
+        // Check if the player exists by ID (if provided) or create new
+        PlayerEntity playerEntity;
+        if (player.id() != null) {
+            playerEntity = playerRepository.findById(player.id()).orElseGet(() -> {
+                // Create a new player if not found
+                PlayerEntity newPlayer = PlayerEntity.fromDomainModel(player);
+                return playerRepository.save(newPlayer);
+            });
+        } else {
+            // Create a new player since no ID was provided
+            // Generate a UUID for the player
+            String playerId = java.util.UUID.randomUUID().toString();
+            PlayerEntity newPlayer = new PlayerEntity(playerId, player.name());
+            playerEntity = playerRepository.save(newPlayer);
+        }
 
         // Get the quiz
         QuizEntity quizEntity = quizRepository
@@ -262,7 +271,10 @@ public class QuizService {
         // Store in memory for active state
         quizStates.put(quizId, state);
 
-        log.info("Quiz {} started successfully with first question: {}", quizId, firstQuestion.getId());
+        log.info(
+                "Quiz {} started successfully with first question: {}",
+                quizId,
+                firstQuestion.getId());
 
         return state;
     }
