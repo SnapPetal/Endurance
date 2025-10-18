@@ -421,8 +421,74 @@ mvn clean install
 
 ### Running Tests
 
+#### Unit Tests
 ```bash
 mvn test
+```
+
+#### Integration Testing Locally
+
+To test the service locally with WebSocket connections:
+
+1. **Start the application** with the dev profile:
+   ```bash
+   export AWS_ACCESS_KEY_ID=your_key
+   export AWS_SECRET_ACCESS_KEY=your_secret
+   mvn spring-boot:run -Dspring-boot.run.profiles=dev
+   ```
+
+2. **Install test dependencies** (using Yarn):
+   ```bash
+   yarn add sockjs-client stompjs
+   ```
+
+3. **Create a test script** (example `test-quiz.js`):
+   ```javascript
+   const SockJS = require('sockjs-client');
+   const Stomp = require('stompjs');
+
+   const socket = new SockJS('http://localhost:8080/quiz-websocket');
+   const stompClient = Stomp.over(socket);
+
+   stompClient.connect({}, function (frame) {
+       console.log('✅ Connected to WebSocket');
+
+       // Subscribe to quiz created topic
+       stompClient.subscribe('/topic/quiz/created', function (message) {
+           const quiz = JSON.parse(message.body);
+           console.log('Quiz Created:', quiz.id, quiz.title);
+
+           // Subscribe to quiz state and start the quiz
+           stompClient.subscribe('/topic/quiz/state/' + quiz.id, function (stateMsg) {
+               const state = JSON.parse(stateMsg.body);
+               console.log('Quiz Started! Current Question:', state.currentQuestion.questionText);
+               stompClient.disconnect();
+           });
+
+           stompClient.send("/app/quiz/start", {}, JSON.stringify(quiz.id));
+       });
+
+       // Create a trivia quiz
+       const request = {
+           title: 'Test Trivia Quiz',
+           questionCount: 3,
+           difficulty: 'EASY'
+       };
+
+       stompClient.send("/app/quiz/create/trivia", {}, JSON.stringify(request));
+   });
+   ```
+
+4. **Run the test**:
+   ```bash
+   node test-quiz.js
+   ```
+
+Expected output:
+```
+✅ Connected to WebSocket
+Quiz Created: 1760754362883 Test Trivia Quiz
+Quiz Started! Current Question: What is the first step in Dave Ramsey's Baby Steps?
 ```
 
 ### Code Style
